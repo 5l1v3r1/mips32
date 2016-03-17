@@ -4,9 +4,11 @@ type ArgumentType int
 
 const (
 	Register ArgumentType = iota
-	Constant16
+	SignedConstant16
+	UnsignedConstant16
 	Constant5
-	CodePointer
+	AbsoluteCodePointer
+	RelativeCodePointer
 	MemoryAddress
 )
 
@@ -18,18 +20,18 @@ type Template struct {
 
 var Templates = []Template{
 	{"NOP", []ArgumentType{}},
-	{"ADDIU", []ArgumentType{Register, Register, Constant16}},
+	{"ADDIU", []ArgumentType{Register, Register, SignedConstant16}},
 	{"ADDU", []ArgumentType{Register, Register, Register}},
 	{"AND", []ArgumentType{Register, Register, Register}},
-	{"ANDI", []ArgumentType{Register, Register, Constant16}},
-	{"BEQ", []ArgumentType{Register, Register, CodePointer}},
-	{"BGEZ", []ArgumentType{Register, CodePointer}},
-	{"BGTZ", []ArgumentType{Register, CodePointer}},
-	{"BLEZ", []ArgumentType{Register, CodePointer}},
-	{"BLTZ", []ArgumentType{Register, CodePointer}},
-	{"BNE", []ArgumentType{Register, Register, CodePointer}},
-	{"J", []ArgumentType{CodePointer}},
-	{"JAL", []ArgumentType{CodePointer}},
+	{"ANDI", []ArgumentType{Register, Register, UnsignedConstant16}},
+	{"BEQ", []ArgumentType{Register, Register, RelativeCodePointer}},
+	{"BGEZ", []ArgumentType{Register, RelativeCodePointer}},
+	{"BGTZ", []ArgumentType{Register, RelativeCodePointer}},
+	{"BLEZ", []ArgumentType{Register, RelativeCodePointer}},
+	{"BLTZ", []ArgumentType{Register, RelativeCodePointer}},
+	{"BNE", []ArgumentType{Register, Register, RelativeCodePointer}},
+	{"J", []ArgumentType{AbsoluteCodePointer}},
+	{"JAL", []ArgumentType{AbsoluteCodePointer}},
 	{"JALR", []ArgumentType{Register}},
 	{"JALR", []ArgumentType{Register, Register}},
 	{"JR", []ArgumentType{Register}},
@@ -38,16 +40,16 @@ var Templates = []Template{
 	{"LW", []ArgumentType{Register, MemoryAddress}},
 	{"SB", []ArgumentType{Register, MemoryAddress}},
 	{"SW", []ArgumentType{Register, MemoryAddress}},
-	{"LUI", []ArgumentType{Register, Constant16}},
+	{"LUI", []ArgumentType{Register, UnsignedConstant16}},
 	{"MOVN", []ArgumentType{Register, Register, Register}},
 	{"MOVZ", []ArgumentType{Register, Register, Register}},
 	{"OR", []ArgumentType{Register, Register, Register}},
-	{"ORI", []ArgumentType{Register, Register, Constant16}},
+	{"ORI", []ArgumentType{Register, Register, UnsignedConstant16}},
 	{"SLL", []ArgumentType{Register, Register, Constant5}},
 	{"SLLV", []ArgumentType{Register, Register, Register}},
 	{"SLT", []ArgumentType{Register, Register, Register}},
-	{"SLTI", []ArgumentType{Register, Register, Constant5}},
-	{"SLTIU", []ArgumentType{Register, Register, Constant5}},
+	{"SLTI", []ArgumentType{Register, Register, SignedConstant16}},
+	{"SLTIU", []ArgumentType{Register, Register, SignedConstant16}},
 	{"SLTU", []ArgumentType{Register, Register, Register}},
 	{"SRA", []ArgumentType{Register, Register, Constant5}},
 	{"SRAV", []ArgumentType{Register, Register, Register}},
@@ -55,5 +57,5 @@ var Templates = []Template{
 	{"SRLV", []ArgumentType{Register, Register, Register}},
 	{"SUBU", []ArgumentType{Register, Register, Register}},
 	{"XOR", []ArgumentType{Register, Register, Register}},
-	{"XORI", []ArgumentType{Register, Register, Constant5}},
+	{"XORI", []ArgumentType{Register, Register, SignedConstant16}},
 }
