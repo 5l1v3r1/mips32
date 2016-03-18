@@ -9,11 +9,12 @@ import (
 
 var registerNamePattern = "\\$(t[0-9]|s[0-7]|a[0-3]|v[01]|sp|fp|gp|ra|zero|[0-9]|[0-2][0-9]|3[01])"
 var constantNumberPattern = "(-?[0-9]*|-?0x[0-9a-fA-F]*)"
+var symbolNamePattern = "([a-zA-Z0-9_]*)"
 
 var (
 	registerRegexp = regexp.MustCompile("^" + registerNamePattern + "$")
 	constantRegexp = regexp.MustCompile("^" + constantNumberPattern + "$")
-	symbolRegexp   = regexp.MustCompile("^[a-zA-Z0-9_]*$")
+	symbolRegexp   = regexp.MustCompile("^" + symbolNamePattern + "$")
 	memoryRegexp   = regexp.MustCompile("^(" + constantNumberPattern + "|)\\(" +
 		registerNamePattern + "\\)$")
 	memorySubfieldsRegexp = regexp.MustCompile("^(.*)\\((.*)\\)$")
