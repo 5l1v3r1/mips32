@@ -7,9 +7,12 @@ import (
 	"strings"
 )
 
-var registerNamePattern = "\\$(t[0-9]|s[0-7]|a[0-3]|v[01]|sp|fp|gp|ra|zero|[0-9]|[0-2][0-9]|3[01])"
-var constantNumberPattern = "(-?[0-9]*|-?0x[0-9a-fA-F]*)"
-var symbolNamePattern = "([a-zA-Z0-9_]*)"
+var (
+	registerNamePattern = "\\$(t[0-9]|s[0-7]|a[0-3]|v[01]|sp|fp|gp|ra|zero|" +
+		"r?([0-9]|[0-2][0-9]|3[01]))"
+	constantNumberPattern = "(-?[0-9]*|-?0x[0-9a-fA-F]*)"
+	symbolNamePattern     = "([a-zA-Z0-9_]*)"
+)
 
 var (
 	registerRegexp = regexp.MustCompile("^" + registerNamePattern + "$")
@@ -192,7 +195,8 @@ func parseRegister(tokenStr string) (regIndex int, err error) {
 		return num, nil
 	}
 
-	prefixes := map[string]int{"t([0-7])": 8, "t([89])": 24 - 8, "s([0-7])": 16, "a([0-3])": 4, "v([01])": 2}
+	prefixes := map[string]int{"t([0-7])": 8, "t([89])": 24 - 8, "s([0-7])": 16, "a([0-3])": 4,
+		"v([01])": 2, "r([12][0-9]|3[01]|[0-9])": 0}
 	for prefix, start := range prefixes {
 		r := regexp.MustCompile("^" + prefix + "$")
 		m := r.FindStringSubmatch(rawName)

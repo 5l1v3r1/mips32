@@ -1,0 +1,276 @@
+package mips32
+
+import "testing"
+
+func TestParseArgToken(t *testing.T) {
+	token, err := ParseArgToken("5")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if val, ok := token.Constant5(); !ok {
+			t.Error("5 is a Constant5")
+		} else if val != 5 {
+			t.Error("invalid Constant5 for 5:", val)
+		}
+		if _, ok := token.MemoryReference(); ok {
+			t.Error("5 is not a MemoryReference")
+		}
+		if _, ok := token.Register(); ok {
+			t.Error("5 is not a Register")
+		}
+		if ptr, ok := token.AbsoluteCodePointer(); !ok {
+			t.Error("5 is an absolute code pointer")
+		} else if !ptr.Absolute {
+			t.Error("absolute flag should be set")
+		} else if ptr.IsSymbol {
+			t.Error("5 is not a symbol")
+		} else if ptr.Constant != 5 {
+			t.Error("invalid AbsoluteCodePointer for 5:", ptr.Constant)
+		}
+		if ptr, ok := token.RelativeCodePointer(); !ok {
+			t.Error("5 is a relative code pointer")
+		} else if ptr.Absolute {
+			t.Error("absolute flag should not be set")
+		} else if ptr.IsSymbol {
+			t.Error("5 is not a symbol")
+		} else if ptr.Constant != 5 {
+			t.Error("invalid RelativeCodePointer for 5:", ptr.Constant)
+		}
+		if val, ok := token.SignedConstant16(); !ok {
+			t.Error("5 is a SignedConstant16")
+		} else if val != 5 {
+			t.Error("invalid SignedConstant16 for 5:", val)
+		}
+		if val, ok := token.UnsignedConstant16(); !ok {
+			t.Error("5 is an UnsignedConstant16")
+		} else if val != 5 {
+			t.Error("invalid UnsignedConstant16 for 5:", val)
+		}
+	}
+
+	token, err = ParseArgToken("0x50")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if _, ok := token.Constant5(); ok {
+			t.Error("0x50 is not a Constant5")
+		}
+		if _, ok := token.MemoryReference(); ok {
+			t.Error("0x50 is not a MemoryReference")
+		}
+		if _, ok := token.Register(); ok {
+			t.Error("0x50 is not a Register")
+		}
+		if ptr, ok := token.AbsoluteCodePointer(); !ok {
+			t.Error("0x50 is an absolute code pointer")
+		} else if !ptr.Absolute {
+			t.Error("absolute flag should be set")
+		} else if ptr.IsSymbol {
+			t.Error("0x50 is not a symbol")
+		} else if ptr.Constant != 0x50 {
+			t.Error("invalid AbsoluteCodePointer for 0x50:", ptr.Constant)
+		}
+		if ptr, ok := token.RelativeCodePointer(); !ok {
+			t.Error("0x50 is a relative code pointer")
+		} else if ptr.Absolute {
+			t.Error("absolute flag should not be set")
+		} else if ptr.IsSymbol {
+			t.Error("0x50 is not a symbol")
+		} else if ptr.Constant != 0x50 {
+			t.Error("invalid RelativeCodePointer for 0x50:", ptr.Constant)
+		}
+		if val, ok := token.SignedConstant16(); !ok {
+			t.Error("0x50 is a SignedConstant16")
+		} else if val != 0x50 {
+			t.Error("invalid SignedConstant16 for 0x50:", val)
+		}
+		if val, ok := token.UnsignedConstant16(); !ok {
+			t.Error("0x50 is an UnsignedConstant16")
+		} else if val != 0x50 {
+			t.Error("invalid UnsignedConstant16 for 0x50:", val)
+		}
+	}
+
+	token, err = ParseArgToken("-0x50")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if _, ok := token.Constant5(); ok {
+			t.Error("-0x50 is not a Constant5")
+		}
+		if _, ok := token.MemoryReference(); ok {
+			t.Error("-0x50 is not a MemoryReference")
+		}
+		if _, ok := token.Register(); ok {
+			t.Error("-0x50 is not a Register")
+		}
+		if _, ok := token.AbsoluteCodePointer(); ok {
+			t.Error("-0x50 is not an absolute code pointer")
+		}
+		if ptr, ok := token.RelativeCodePointer(); !ok {
+			t.Error("-0x50 is a relative code pointer")
+		} else if ptr.Absolute {
+			t.Error("absolute flag should not be set")
+		} else if ptr.IsSymbol {
+			t.Error("-0x50 is not a symbol")
+		} else if int32(ptr.Constant) != -0x50 {
+			t.Error("invalid RelativeCodePointer for -0x50:", int32(ptr.Constant))
+		}
+		if val, ok := token.SignedConstant16(); !ok {
+			t.Error("-0x50 is a SignedConstant16")
+		} else if val != -0x50 {
+			t.Error("invalid SignedConstant16 for -0x50:", val)
+		}
+		if _, ok := token.UnsignedConstant16(); ok {
+			t.Error("-0x50 is not an UnsignedConstant16")
+		}
+	}
+
+	regTests := map[string]int{"$t0": 8, "$8": 8, "$r8": 8, "$a0": 4, "$4": 4, "$r15": 15,
+		"$r31": 31}
+	for regName, regNum := range regTests {
+		token, err = ParseArgToken(regName)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		if n, ok := token.Register(); !ok {
+			t.Error(regName, "is a register")
+		} else if n != regNum {
+			t.Error("invalid register number for", regName, n, "expected", regNum)
+		}
+		if _, ok := token.AbsoluteCodePointer(); ok {
+			t.Error(regName, "is not an absolute code pointer")
+		}
+		if _, ok := token.RelativeCodePointer(); ok {
+			t.Error(regName, "is not a relative code pointer")
+		}
+		if _, ok := token.Constant5(); ok {
+			t.Error(regName, "is not a Constant5")
+		}
+		if _, ok := token.SignedConstant16(); ok {
+			t.Error(regName, "is not a SignedConstant16")
+		}
+		if _, ok := token.UnsignedConstant16(); ok {
+			t.Error(regName, "is not a UnsignedConstant16")
+		}
+		if _, ok := token.MemoryReference(); ok {
+			t.Error(regName, "is not a MemoryReference")
+		}
+	}
+
+	token, err = ParseArgToken("Monkey5")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if _, ok := token.Register(); ok {
+			t.Error("Monkey5 is not a register")
+		}
+		if ptr, ok := token.AbsoluteCodePointer(); !ok {
+			t.Error("Monkey5 is an absolute code pointer")
+		} else if !ptr.Absolute {
+			t.Error("absolute flag should be set")
+		} else if !ptr.IsSymbol {
+			t.Error("symbol flag should be set")
+		} else if ptr.Symbol != "Monkey5" {
+			t.Error("invalid symbol for Monkey5:", ptr.Symbol)
+		}
+		if ptr, ok := token.RelativeCodePointer(); !ok {
+			t.Error("Monkey5 is a relative code pointer")
+		} else if ptr.Absolute {
+			t.Error("absolute flag should not be set")
+		} else if !ptr.IsSymbol {
+			t.Error("symbol flag should be set")
+		} else if ptr.Symbol != "Monkey5" {
+			t.Error("invalid symbol for Monkey5:", ptr.Symbol)
+		}
+		if _, ok := token.Constant5(); ok {
+			t.Error("Monkey5 is not a Constant5")
+		}
+		if _, ok := token.SignedConstant16(); ok {
+			t.Error("Monkey5 is not a SignedConstant16")
+		}
+		if _, ok := token.UnsignedConstant16(); ok {
+			t.Error("Monkey5 is not a UnsignedConstant16")
+		}
+		if _, ok := token.MemoryReference(); ok {
+			t.Error("Monkey5 is not a MemoryReference")
+		}
+	}
+
+	token, err = ParseArgToken("-0x50($r5)")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if _, ok := token.Register(); ok {
+			t.Error("-0x50($r5) is not a register")
+		}
+		if _, ok := token.AbsoluteCodePointer(); ok {
+			t.Error("-0x50($r5) is not an absolute code pointer")
+		}
+		if _, ok := token.RelativeCodePointer(); ok {
+			t.Error("-0x50($r5) is not a relative code pointer")
+		}
+		if _, ok := token.Constant5(); ok {
+			t.Error("-0x50($r5) is not a Constant5")
+		}
+		if _, ok := token.SignedConstant16(); ok {
+			t.Error("-0x50($r5) is not a SignedConstant16")
+		}
+		if _, ok := token.UnsignedConstant16(); ok {
+			t.Error("-0x50($r5) is not a UnsignedConstant16")
+		}
+		if ref, ok := token.MemoryReference(); !ok {
+			t.Error("-0x50($r5) is a MemoryReference")
+		} else if ref.Offset != -0x50 {
+			t.Error("invalid offset for -0x50($r5):", ref.Offset)
+		} else if ref.Register != 5 {
+			t.Error("invalid register for -0x50($r5):", ref.Offset)
+		}
+	}
+
+	token, err = ParseArgToken("($r31)")
+	if err != nil {
+		t.Error(err)
+	} else {
+		if _, ok := token.Register(); ok {
+			t.Error("($31) is not a register")
+		}
+		if _, ok := token.AbsoluteCodePointer(); ok {
+			t.Error("($r31) is not an absolute code pointer")
+		}
+		if _, ok := token.RelativeCodePointer(); ok {
+			t.Error("($r31) is not a relative code pointer")
+		}
+		if _, ok := token.Constant5(); ok {
+			t.Error("($r31) is not a Constant5")
+		}
+		if _, ok := token.SignedConstant16(); ok {
+			t.Error("($r31) is not a SignedConstant16")
+		}
+		if _, ok := token.UnsignedConstant16(); ok {
+			t.Error("($r31) is not a UnsignedConstant16")
+		}
+		if ref, ok := token.MemoryReference(); !ok {
+			t.Error("($r31) is a MemoryReference")
+		} else if ref.Offset != 0 {
+			t.Error("invalid offset for ($r31):", ref.Offset)
+		} else if ref.Register != 31 {
+			t.Error("invalid register for ($r31):", ref.Offset)
+		}
+	}
+
+	validTokens := []string{"$r0", "$r31", "$r15", "0x7fff($r1)", "-0x8000($r1)"}
+	for _, tok := range validTokens {
+		if _, err := ParseArgToken(tok); err != nil {
+			t.Error("failed to parse "+tok+":", err)
+		}
+	}
+
+	badTokens := []string{"Monkey Brain", "$r32", "$r-1", "$32", "0x8000($r1)", "-0x8001($r1)"}
+	for _, tok := range badTokens {
+		if _, err := ParseArgToken(tok); err == nil {
+			t.Error("parsed invalid token:", tok)
+		}
+	}
+}
