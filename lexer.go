@@ -9,7 +9,7 @@ import (
 
 var (
 	commentRegexp      = regexp.MustCompile("^(.*?)(#|//|;)(.*)$")
-	directiveRegexp    = regexp.MustCompile("^\\.(text|data)\\s+" + constantNumberPattern + "$")
+	directiveRegexp    = regexp.MustCompile("^\\.(text|word)\\s+" + constantNumberPattern + "$")
 	symbolMarkerRegexp = regexp.MustCompile("^" + symbolNamePattern + ":$")
 	instNameRegexp     = regexp.MustCompile("^[A-Z]*$")
 )

@@ -11,7 +11,7 @@ func TestTokenizeSource(t *testing.T) {
     SW $r5, 0x1337($t0)
 
     # the next line is a NOP
-    .data 0x00000000
+    .word 0x00000000
 
     J FOOBAR
     NOP
@@ -68,7 +68,7 @@ func TestTokenizeSource(t *testing.T) {
 			},
 			{
 				LineNumber: 9,
-				Directive:  &TokenizedDirective{"data", 0},
+				Directive:  &TokenizedDirective{"word", 0},
 			},
 			{
 				LineNumber: 11,
