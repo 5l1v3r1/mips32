@@ -122,9 +122,6 @@ func (t *ArgToken) RelativeCodePointer() (ptr CodePointer, ok bool) {
 // If this token cannot be treated as an absolute code pointer, ok will be false.
 func (t *ArgToken) AbsoluteCodePointer() (ptr CodePointer, ok bool) {
 	if t.isConstant {
-		if (t.constant & 0xfc000000) != 0 {
-			return
-		}
 		return CodePointer{Absolute: true, Constant: uint32(t.constant)}, true
 	} else if t.isSymbol {
 		return CodePointer{Absolute: true, IsSymbol: true, Symbol: t.symbol}, true

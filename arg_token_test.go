@@ -104,8 +104,14 @@ func TestParseArgToken(t *testing.T) {
 		if _, ok := token.Register(); ok {
 			t.Error("-0x50 is not a Register")
 		}
-		if _, ok := token.AbsoluteCodePointer(); ok {
-			t.Error("-0x50 is not an absolute code pointer")
+		if ptr, ok := token.AbsoluteCodePointer(); !ok {
+			t.Error("-0x50 is an absolute code pointer")
+		} else if !ptr.Absolute {
+			t.Error("absolute flag should be set")
+		} else if ptr.IsSymbol {
+			t.Error("-0x50 is not a symbol")
+		} else if int32(ptr.Constant) != -0x50 {
+			t.Error("invalid AbsoluteCodePointer for -0x50:", int32(ptr.Constant))
 		}
 		if ptr, ok := token.RelativeCodePointer(); !ok {
 			t.Error("-0x50 is a relative code pointer")

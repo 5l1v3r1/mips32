@@ -64,6 +64,10 @@ const jalrFunc = 0x09
 // DecodeInstruction returns an Instruction for a 32-bit word.
 // This can never fail, since invalid instructions can be treated as ".word" directives.
 func DecodeInstruction(word uint32) *Instruction {
+	if word == 0 {
+		return &Instruction{Name: "NOP"}
+	}
+
 	opcode := (word >> 26) & 0x3f
 	registerS := int((word >> 21) & 0x1f)
 	registerT := int((word >> 16) & 0x1f)
@@ -179,6 +183,11 @@ func DecodeInstruction(word uint32) *Instruction {
 func (inst *Instruction) Encode(instAddr uint32, symbols map[string]uint32) (uint32, error) {
 	if inst.Name == ".word" {
 		return inst.RawWord, nil
+	} else if inst.Name == "NOP" {
+		if len(inst.Registers) != 0 {
+			return 0, registerCountError(inst.Name)
+		}
+		return 0, nil
 	}
 
 	if opcode, ok := numberForInstruction(twoOperandImmediateOpcodes, inst.Name); ok {
@@ -305,6 +314,9 @@ func instructionBranchOffset(inst *Instruction, instAddr uint32,
 			return uint32(uint16(diff)), nil
 		}
 	} else {
+		if inst.CodePointer.Constant&3 != 0 {
+			return 0, errors.New("misaligned address")
+		}
 		return inst.CodePointer.Constant, nil
 	}
 }
@@ -326,7 +338,7 @@ func instructionJumpBase(inst *Instruction, instAddr uint32,
 		if (addr & 0xf0000000) != ((instAddr + 4) & 0xf0000000) {
 			return 0, errors.New("cannot encode jump address in 26 bits")
 		} else if (addr & 3) != 0 {
-			return 0, errors.New("jump address overflows 26 bits")
+			return 0, errors.New("misaligned address")
 		} else {
 			return (addr & 0x0fffffff) >> 2, nil
 		}
