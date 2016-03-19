@@ -2,6 +2,7 @@ package mips32
 
 import (
 	"errors"
+	"sort"
 	"strconv"
 )
 
@@ -37,14 +38,14 @@ func ParseExecutable(lines []TokenizedLine) (*Executable, error) {
 			instructionAddr += 4
 		} else if line.Directive != nil {
 			dir := line.Directive
-			if dir.Name == ".word" {
+			if dir.Name == "word" {
 				if res.addressInUse(instructionAddr) {
 					return nil, addressInUseError(line.LineNumber, instructionAddr)
 				}
 				nextInst := DecodeInstruction(dir.Constant)
 				res.Segments[segmentStart] = append(res.Segments[segmentStart], *nextInst)
 				instructionAddr += 4
-			} else if dir.Name == ".text" {
+			} else if dir.Name == "text" {
 				if dir.Constant&3 != 0 {
 					return nil, errors.New("line " + strconv.Itoa(line.LineNumber) +
 						": misaligned segment")
@@ -64,6 +65,7 @@ func ParseExecutable(lines []TokenizedLine) (*Executable, error) {
 			res.Symbols[sym] = instructionAddr
 		}
 	}
+	res.joinContiguousSegments()
 	return res, nil
 }
 
@@ -75,6 +77,28 @@ func (e *Executable) addressInUse(addr uint32) bool {
 		}
 	}
 	return false
+}
+
+// joinContiguousSegments joins contiguous segments.
+func (e *Executable) joinContiguousSegments() {
+	l := make(uint32List, 0, len(e.Segments))
+	for seg := range e.Segments {
+		l = append(l, seg)
+	}
+	sort.Sort(l)
+
+	for i := 0; i < len(l)-1; i++ {
+		segStart := l[i]
+		size := uint32(len(e.Segments[segStart]) * 4)
+		if segStart+size == l[i+1] {
+			nextInstructions := e.Segments[l[i+1]]
+			e.Segments[segStart] = append(e.Segments[segStart], nextInstructions...)
+			delete(e.Segments, l[i+1])
+			copy(l[i:], l[i+1:])
+			l = l[:len(l)-1]
+			i--
+		}
+	}
 }
 
 // Instruction stores all of the information about an instruction in distinct fields.
@@ -144,4 +168,18 @@ func ParseTokenizedInstruction(t *TokenizedInstruction) (*Instruction, error) {
 func addressInUseError(line int, addr uint32) error {
 	hexStr := "0x" + strconv.FormatUint(uint64(addr), 16)
 	return errors.New("line " + strconv.Itoa(line) + ": overwriting address " + hexStr)
+}
+
+type uint32List []uint32
+
+func (u uint32List) Len() int {
+	return len(u)
+}
+
+func (u uint32List) Less(i, j int) bool {
+	return u[i] < u[j]
+}
+
+func (u uint32List) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
 }
