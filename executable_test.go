@@ -1,6 +1,9 @@
 package mips32
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestParseExecutableSuccess(t *testing.T) {
 	exc := `
@@ -15,6 +18,8 @@ func TestParseExecutableSuccess(t *testing.T) {
         ORI $r5, $r5, 0xDEAD
         .text 0x4
         SRLV $r6, $r5, $r7
+        .text 0x100
+        DANGLER:
     `
 	lines, err := TokenizeSource(exc)
 	if err != nil {
@@ -42,6 +47,7 @@ func TestParseExecutableSuccess(t *testing.T) {
 		Symbols: map[string]uint32{
 			"MONKEY":  0x54,
 			"MONKEY1": 0x20,
+			"DANGLER": 0x100,
 		},
 	}
 	if len(expected.Segments) != len(executable.Segments) {
@@ -88,6 +94,63 @@ func TestParseExecutableFailure(t *testing.T) {
 		}
 		if _, err := ParseExecutable(lines); err == nil {
 			t.Error("expected error for:", failure)
+		}
+	}
+}
+
+func TestExecutableRender(t *testing.T) {
+	programs := []string{
+		`
+            FOO:
+            .text 0x20
+            MOVN $r3, $r2, $r1
+            NOP
+            BAZ:
+            .text 0x30
+            BAR:
+            ADDU $r7, $r15, $r31
+            BUZ:
+            SLLV $r5, $r6, $r7
+            .text 0x50
+            SYM:
+            .text 0x70
+            SUM:
+        `,
+		`
+            FOO:
+            NOP
+            MOVN $r3, $r2, $r1
+            END:
+        `,
+	}
+	for _, program := range programs {
+		lines, err := TokenizeSource(program)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		exec, err := ParseExecutable(lines)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		rendered, err := exec.Render()
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		if len(rendered) != len(lines) {
+			t.Error("invalid rendering size:", len(rendered))
+			for i, x := range rendered {
+				fmt.Println(i, x.Directive, x.Instruction, x.SymbolMarker)
+			}
+			continue
+		}
+		for i, line := range rendered {
+			line.LineNumber = lines[i].LineNumber
+			if !line.Equal(&lines[i]) {
+				t.Error("invalid line", i, "-", line)
+			}
 		}
 	}
 }

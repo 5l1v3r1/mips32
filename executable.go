@@ -122,9 +122,8 @@ func (e *Executable) Render() (list []TokenizedLine, err error) {
 					err.Error())
 			}
 			list = append(list, *rendered)
-			currentAddress++
+			currentAddress += 4
 		}
-		currentAddress = segment
 	}
 
 	for symbolIdx < len(sortedSymbols) {
