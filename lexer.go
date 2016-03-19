@@ -63,8 +63,8 @@ type TokenizedDirective struct {
 
 // A TokenizedInstruction represents an instruction call.
 type TokenizedInstruction struct {
-	Name string
-	Args []*ArgToken
+	Name      string
+	Arguments []*ArgToken
 }
 
 // Equal returns whether or not two TokenizedInstructions are syntactically equivalent.
@@ -76,11 +76,11 @@ func (t *TokenizedInstruction) Equal(t1 *TokenizedInstruction) bool {
 	if t.Name != t1.Name {
 		return false
 	}
-	if len(t.Args) != len(t1.Args) {
+	if len(t.Arguments) != len(t1.Arguments) {
 		return false
 	}
-	for i, arg := range t.Args {
-		if *arg != *t1.Args[i] {
+	for i, arg := range t.Arguments {
+		if *arg != *t1.Arguments[i] {
 			return false
 		}
 	}
@@ -150,8 +150,8 @@ func tokenizeLine(lineText string) (line TokenizedLine, err error) {
 	}
 
 	line.Instruction = &TokenizedInstruction{
-		Name: fields[0],
-		Args: make([]*ArgToken, len(fields)-1),
+		Name:      fields[0],
+		Arguments: make([]*ArgToken, len(fields)-1),
 	}
 
 	for i, field := range fields[1:] {
@@ -162,7 +162,7 @@ func tokenizeLine(lineText string) (line TokenizedLine, err error) {
 			}
 			field = field[:len(field)-1]
 		}
-		line.Instruction.Args[i], err = ParseArgToken(field)
+		line.Instruction.Arguments[i], err = ParseArgToken(field)
 		if err != nil {
 			err = errors.New("operand " + strconv.Itoa(i+1) + ": " + err.Error())
 			return

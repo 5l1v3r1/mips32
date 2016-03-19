@@ -18,6 +18,46 @@ type Template struct {
 	Arguments []ArgumentType
 }
 
+func (t *Template) Match(tok *TokenizedInstruction) bool {
+	if t.Name != tok.Name || len(t.Arguments) != len(tok.Arguments) {
+		return false
+	}
+	for i, arg := range t.Arguments {
+		tokArg := tok.Arguments[i]
+		switch arg {
+		case Register:
+			if _, ok := tokArg.Register(); !ok {
+				return false
+			}
+		case SignedConstant16:
+			if _, ok := tokArg.SignedConstant16(); !ok {
+				return false
+			}
+		case UnsignedConstant16:
+			if _, ok := tokArg.UnsignedConstant16(); !ok {
+				return false
+			}
+		case Constant5:
+			if _, ok := tokArg.Constant5(); !ok {
+				return false
+			}
+		case AbsoluteCodePointer:
+			if _, ok := tokArg.AbsoluteCodePointer(); !ok {
+				return false
+			}
+		case RelativeCodePointer:
+			if _, ok := tokArg.RelativeCodePointer(); !ok {
+				return false
+			}
+		case MemoryAddress:
+			if _, ok := tokArg.MemoryReference(); !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 var Templates = []Template{
 	{"NOP", []ArgumentType{}},
 	{"ADDIU", []ArgumentType{Register, Register, SignedConstant16}},

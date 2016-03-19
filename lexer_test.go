@@ -34,7 +34,7 @@ func TestTokenizeSource(t *testing.T) {
 				LineNumber: 3,
 				Instruction: &TokenizedInstruction{
 					Name: "LUI",
-					Args: []*ArgToken{
+					Arguments: []*ArgToken{
 						&ArgToken{isRegister: true, register: 5},
 						&ArgToken{isConstant: true, constant: 0xDEAD},
 					},
@@ -45,7 +45,7 @@ func TestTokenizeSource(t *testing.T) {
 				Comment:    createStringPtr(" 0xDEADBEEF is a cool hex string."),
 				Instruction: &TokenizedInstruction{
 					Name: "ORI",
-					Args: []*ArgToken{
+					Arguments: []*ArgToken{
 						&ArgToken{isRegister: true, register: 5},
 						&ArgToken{isRegister: true, register: 5},
 						&ArgToken{isConstant: true, constant: 0xBEEF},
@@ -56,7 +56,7 @@ func TestTokenizeSource(t *testing.T) {
 				LineNumber: 6,
 				Instruction: &TokenizedInstruction{
 					Name: "SW",
-					Args: []*ArgToken{
+					Arguments: []*ArgToken{
 						&ArgToken{isRegister: true, register: 5},
 						&ArgToken{isMemory: true, memOffset: 0x1337, memRegister: 8},
 					},
@@ -74,7 +74,7 @@ func TestTokenizeSource(t *testing.T) {
 				LineNumber: 11,
 				Instruction: &TokenizedInstruction{
 					Name: "J",
-					Args: []*ArgToken{
+					Arguments: []*ArgToken{
 						&ArgToken{isSymbol: true, symbol: "FOOBAR"},
 					},
 				},
@@ -82,8 +82,8 @@ func TestTokenizeSource(t *testing.T) {
 			{
 				LineNumber: 12,
 				Instruction: &TokenizedInstruction{
-					Name: "NOP",
-					Args: []*ArgToken{},
+					Name:      "NOP",
+					Arguments: []*ArgToken{},
 				},
 			},
 		}
