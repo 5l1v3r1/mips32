@@ -5,35 +5,35 @@ import "testing"
 func TestInstCodingProgram(t *testing.T) {
 	// TODO: add the rest of the instructions to this program.
 	code := `
-        NOP
-        ADDIU $r5, $r4, -0x1337
-        ADDU $r6, $r31, $r15
-        AND $r31, $r5, $r1
-        ANDI $r17, $r2, 0xf0f0
+		NOP
+		ADDIU $r5, $r4, -0x1337
+		ADDU $r6, $r31, $r15
+		AND $r31, $r5, $r1
+		ANDI $r17, $r2, 0xf0f0
 
-        LUI $r5, 0xf0f0
-        MOVN $r17, $r18, $r19
-        MOVZ $r18, $r19, $r20
-        NOR $r1, $r2, $r3
-        OR $r17, $r2, $r17
+		LUI $r5, 0xf0f0
+		MOVN $r17, $r18, $r19
+		MOVZ $r18, $r19, $r20
+		NOR $r1, $r2, $r3
+		OR $r17, $r2, $r17
 
-        ORI $r18, $r0, 0xf007
-        SLL $r1, $r18, 7
-        SLLV $r2, $r30, $r5
-        SLT $r15, $r5, $r8
-        SLTI $r15, $r5, -10
+		ORI $r18, $r0, 0xf007
+		SLL $r1, $r18, 7
+		SLLV $r2, $r30, $r5
+		SLT $r15, $r5, $r8
+		SLTI $r15, $r5, -10
 
-        SLTU $r0, $r5, $r8
-        SLTIU $r15, $r5, -10
-        SRA $r5, $r3, 15
-        SRAV $r5, $r1, $r0
-        SRL $r5, $r3, 15
+		SLTU $r0, $r5, $r8
+		SLTIU $r15, $r5, -10
+		SRA $r5, $r3, 15
+		SRAV $r5, $r1, $r0
+		SRL $r5, $r3, 15
 
-        SRLV $r5, $r1, $r31
-        SUBU $r9, $r10, $r31
-        XOR $r2, $r3, $r4
-        XORI $r2, $r3, 666
-    `
+		SRLV $r5, $r1, $r31
+		SUBU $r9, $r10, $r31
+		XOR $r2, $r3, $r4
+		XORI $r2, $r3, 666
+	`
 	words := []uint32{
 		0x00000000, 0x2485ECC9, 0x03ef3021, 0x00a1f824, 0x3051f0f0,
 		0x3c05f0f0, 0x0253880b, 0x0274900a, 0x00430827, 0x00518825,
