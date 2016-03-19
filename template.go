@@ -83,6 +83,7 @@ var Templates = []Template{
 	{"LUI", []ArgumentType{Register, UnsignedConstant16}},
 	{"MOVN", []ArgumentType{Register, Register, Register}},
 	{"MOVZ", []ArgumentType{Register, Register, Register}},
+	{"NOR", []ArgumentType{Register, Register, Register}},
 	{"OR", []ArgumentType{Register, Register, Register}},
 	{"ORI", []ArgumentType{Register, Register, UnsignedConstant16}},
 	{"SLL", []ArgumentType{Register, Register, Constant5}},
