@@ -6,6 +6,31 @@ import (
 	"strconv"
 )
 
+// Instruction stores all of the information about an instruction in distinct fields.
+// This makes it possible to execute an instruction and see exactly what its operands are.
+type Instruction struct {
+	// Name is the instruction's name.
+	//
+	// If this instruction is from a ".word" directive which does not correspond to a valid
+	// instruction, then the Name field is ".word" and the RawWord field is set.
+	Name string
+
+	// Registers is the list of register indices passed to this instruction.
+	// This list is in the same order as the instruction's operands in assembly.
+	Registers []int
+
+	UnsignedConstant16 uint16
+	SignedConstant16   int16
+	Constant5          uint8
+	CodePointer        CodePointer
+	MemoryReference    MemoryReference
+
+	// RawWord is only used for instructions which cannot be decoded.
+	// This is only used when Name is set to ".word"
+	RawWord uint32
+}
+
+// An Executable stores chunks of instructions (called segments) and a symbol table.
 type Executable struct {
 	// Segments maps chunks of instructions to various parts of the address space.
 	Segments map[uint32][]Instruction
@@ -99,30 +124,6 @@ func (e *Executable) joinContiguousSegments() {
 			i--
 		}
 	}
-}
-
-// Instruction stores all of the information about an instruction in distinct fields.
-// This makes it possible to execute an instruction and see exactly what its operands are.
-type Instruction struct {
-	// Name is the instruction's name.
-	//
-	// If this instruction is from a ".word" directive which does not correspond to a valid
-	// instruction, then the Name field is ".word" and the RawWord field is set.
-	Name string
-
-	// Registers is the list of register indices passed to this instruction.
-	// This list is in the same order as the instruction's operands in assembly.
-	Registers []int
-
-	UnsignedConstant16 uint16
-	SignedConstant16   int16
-	Constant5          uint8
-	CodePointer        CodePointer
-	MemoryReference    MemoryReference
-
-	// RawWord is only used for instructions which cannot be decoded.
-	// This is only used when Name is set to ".word"
-	RawWord uint32
 }
 
 // ParseTokenizedInstruction generates an Instruction which represents a TokenizedInstruction.
