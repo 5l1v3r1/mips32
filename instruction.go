@@ -65,3 +65,89 @@ func ParseTokenizedInstruction(t *TokenizedInstruction) (*Instruction, error) {
 		return nil, errors.New("unknown instruction: " + t.Name)
 	}
 }
+
+// Render generates a *TokenizedLine that represents this instruction.
+//
+// If this succeeds, the result will normally contain a TokenizedInstruction.
+// However, if this is a ".word" instruction, then the result will contain a TokenizedDirective.
+//
+// This will fail if the instruction's arguments are invalid.
+func (i *Instruction) Render() (*TokenizedLine, error) {
+	if i.Name == ".word" {
+		return &TokenizedLine{
+			Directive: &TokenizedDirective{
+				Name:     "word",
+				Constant: i.RawWord,
+			},
+		}, nil
+	}
+	found := false
+
+TemplateLoop:
+	for _, template := range Templates {
+		if template.Name != i.Name {
+			continue
+		}
+		found = true
+		if template.RegisterCount() != len(i.Registers) {
+			continue
+		}
+		res := &TokenizedInstruction{
+			Name:      i.Name,
+			Arguments: make([]*ArgToken, len(template.Arguments)),
+		}
+		regIndex := 0
+		for argIndex, arg := range template.Arguments {
+			switch arg {
+			case Register:
+				res.Arguments[argIndex] = &ArgToken{
+					isRegister: true,
+					register:   i.Registers[regIndex],
+				}
+				regIndex++
+			case SignedConstant16:
+				res.Arguments[argIndex] = &ArgToken{
+					isConstant: true,
+					constant:   uint32(i.SignedConstant16),
+				}
+			case UnsignedConstant16:
+				res.Arguments[argIndex] = &ArgToken{
+					isConstant: true,
+					constant:   uint32(i.UnsignedConstant16),
+				}
+			case Constant5:
+				res.Arguments[argIndex] = &ArgToken{
+					isConstant: true,
+					constant:   uint32(i.Constant5),
+				}
+			case AbsoluteCodePointer, RelativeCodePointer:
+				if i.CodePointer.Absolute != (arg == AbsoluteCodePointer) {
+					continue TemplateLoop
+				}
+				if i.CodePointer.IsSymbol {
+					res.Arguments[argIndex] = &ArgToken{
+						isSymbol: true,
+						symbol:   i.CodePointer.Symbol,
+					}
+				} else {
+					res.Arguments[argIndex] = &ArgToken{
+						isConstant: true,
+						constant:   i.CodePointer.Constant,
+					}
+				}
+			case MemoryAddress:
+				res.Arguments[argIndex] = &ArgToken{
+					isMemory:    true,
+					memOffset:   i.MemoryReference.Offset,
+					memRegister: i.MemoryReference.Register,
+				}
+			}
+		}
+		return &TokenizedLine{Instruction: res}, nil
+	}
+	if found {
+		return nil, errors.New("invalid arguments for " + i.Name)
+	} else {
+		return nil, errors.New("no such instruction: " + i.Name)
+	}
+}

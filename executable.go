@@ -67,7 +67,82 @@ func ParseExecutable(lines []TokenizedLine) (*Executable, error) {
 		}
 	}
 	res.joinContiguousSegments()
+	// TODO: make sure no jump offsets are invalid.
 	return res, nil
+}
+
+// Render generates a tokenized source file that corresponds to the given executable.
+// If any the instructions are invalid, this will return an error.
+func (e *Executable) Render() (list []TokenizedLine, err error) {
+	sortedSegments := e.sortedSegmentAddresses()
+	sortedSymbols := e.sortedSymbolAddrPairs()
+
+	if len(sortedSegments) == 0 {
+		sortedSegments = uint32List{0}
+	}
+
+	var symbolIdx int
+	var currentAddress uint32
+
+	for _, segment := range sortedSegments {
+		for symbolIdx < len(sortedSymbols) && sortedSymbols[symbolIdx].Address < segment {
+			sym := sortedSymbols[symbolIdx]
+			if sym.Address != currentAddress {
+				currentAddress = sym.Address
+				list = append(list, TokenizedLine{
+					Directive: &TokenizedDirective{
+						Name:     "text",
+						Constant: sym.Address,
+					},
+				})
+			}
+			list = append(list, TokenizedLine{SymbolMarker: &sym.Symbol})
+			symbolIdx++
+		}
+		if segment != 0 {
+			list = append(list, TokenizedLine{
+				Directive: &TokenizedDirective{
+					Name:     "text",
+					Constant: segment,
+				},
+			})
+		}
+		currentAddress = segment
+		for _, inst := range e.Segments[segment] {
+			for symbolIdx < len(sortedSymbols) &&
+				sortedSymbols[symbolIdx].Address == currentAddress {
+				sym := sortedSymbols[symbolIdx]
+				list = append(list, TokenizedLine{SymbolMarker: &sym.Symbol})
+				symbolIdx++
+			}
+			rendered, err := inst.Render()
+			if err != nil {
+				hexStr := "0x" + strconv.FormatUint(uint64(currentAddress), 16)
+				return nil, errors.New("failed to render instruction at " + hexStr + ": " +
+					err.Error())
+			}
+			list = append(list, *rendered)
+			currentAddress++
+		}
+		currentAddress = segment
+	}
+
+	for symbolIdx < len(sortedSymbols) {
+		sym := sortedSymbols[symbolIdx]
+		if sym.Address != currentAddress {
+			currentAddress = sym.Address
+			list = append(list, TokenizedLine{
+				Directive: &TokenizedDirective{
+					Name:     "text",
+					Constant: sym.Address,
+				},
+			})
+		}
+		list = append(list, TokenizedLine{SymbolMarker: &sym.Symbol})
+		symbolIdx++
+	}
+
+	return
 }
 
 // addressInUse reports of a word-aligned address is being used by one of the segments.
@@ -82,12 +157,7 @@ func (e *Executable) addressInUse(addr uint32) bool {
 
 // joinContiguousSegments joins contiguous segments.
 func (e *Executable) joinContiguousSegments() {
-	l := make(uint32List, 0, len(e.Segments))
-	for seg := range e.Segments {
-		l = append(l, seg)
-	}
-	sort.Sort(l)
-
+	l := e.sortedSegmentAddresses()
 	for i := 0; i < len(l)-1; i++ {
 		segStart := l[i]
 		size := uint32(len(e.Segments[segStart]) * 4)
@@ -100,6 +170,24 @@ func (e *Executable) joinContiguousSegments() {
 			i--
 		}
 	}
+}
+
+func (e *Executable) sortedSegmentAddresses() uint32List {
+	l := make(uint32List, 0, len(e.Segments))
+	for seg := range e.Segments {
+		l = append(l, seg)
+	}
+	sort.Sort(l)
+	return l
+}
+
+func (e *Executable) sortedSymbolAddrPairs() symbolAddrPairList {
+	l := make(symbolAddrPairList, 0, len(e.Symbols))
+	for sym, addr := range e.Symbols {
+		l = append(l, symbolAddrPair{Symbol: sym, Address: addr})
+	}
+	sort.Sort(l)
+	return l
 }
 
 func addressInUseError(line int, addr uint32) error {
@@ -119,4 +207,23 @@ func (u uint32List) Less(i, j int) bool {
 
 func (u uint32List) Swap(i, j int) {
 	u[i], u[j] = u[j], u[i]
+}
+
+type symbolAddrPair struct {
+	Symbol  string
+	Address uint32
+}
+
+type symbolAddrPairList []symbolAddrPair
+
+func (s symbolAddrPairList) Len() int {
+	return len(s)
+}
+
+func (s symbolAddrPairList) Less(i, j int) bool {
+	return s[i].Address < s[j].Address
+}
+
+func (s symbolAddrPairList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }

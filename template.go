@@ -58,6 +58,16 @@ func (t *Template) Match(tok *TokenizedInstruction) bool {
 	return true
 }
 
+func (t *Template) RegisterCount() int {
+	count := 0
+	for _, arg := range t.Arguments {
+		if arg == Register {
+			count++
+		}
+	}
+	return count
+}
+
 var Templates = []Template{
 	{"NOP", []ArgumentType{}},
 	{"ADDIU", []ArgumentType{Register, Register, SignedConstant16}},
