@@ -106,11 +106,11 @@ func (t *ArgToken) Constant5() (constant uint8, ok bool) {
 // If this token cannot be treated as a relative code pointer, ok will be false.
 func (t *ArgToken) RelativeCodePointer() (ptr CodePointer, ok bool) {
 	if t.isConstant {
-		signedConst, validConst := t.SignedConstant16()
-		if !validConst {
+		constant := int16(t.constant >> 2)
+		if uint32(constant)<<2 != t.constant&0xfffffffc {
 			return
 		}
-		return CodePointer{Constant: uint32(signedConst)}, true
+		return CodePointer{Constant: t.constant}, true
 	} else if t.isSymbol {
 		return CodePointer{IsSymbol: true, Symbol: t.symbol}, true
 	} else {

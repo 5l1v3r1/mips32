@@ -98,7 +98,7 @@ func DecodeInstruction(word uint32) *Instruction {
 			return &Instruction{
 				Name:        instName,
 				Registers:   []int{registerS, registerT},
-				CodePointer: CodePointer{Constant: immediate},
+				CodePointer: CodePointer{Constant: uint32(int16(immediate)) << 2},
 			}
 		}
 		if instName == "BLTZ" && registerT == 1 {
@@ -109,13 +109,13 @@ func DecodeInstruction(word uint32) *Instruction {
 			return &Instruction{
 				Name:        instName,
 				Registers:   []int{registerS},
-				CodePointer: CodePointer{Constant: immediate},
+				CodePointer: CodePointer{Constant: uint32(int16(immediate)) << 2},
 			}
 		}
 	}
 
 	if instName, ok := jTypeOpcodes[opcode]; ok {
-		jumpAddr := word & 0x03ffffff
+		jumpAddr := (word & 0x03ffffff) << 2
 		return &Instruction{
 			Name:        instName,
 			CodePointer: CodePointer{Absolute: true, Constant: jumpAddr},
@@ -221,7 +221,7 @@ func (inst *Instruction) Encode(instAddr uint32, symbols map[string]uint32) (uin
 				return 0, registerCountError(inst.Name)
 			}
 			return (opcode << 26) | (uint32(inst.Registers[0]) << 21) |
-				(uint32(inst.Registers[1]) << 16) | branchOffset, nil
+				(uint32(inst.Registers[1]) << 16) | ((branchOffset >> 2) & 0xffff), nil
 		}
 		if len(inst.Registers) != 1 {
 			return 0, registerCountError(inst.Name)
@@ -231,7 +231,7 @@ func (inst *Instruction) Encode(instAddr uint32, symbols map[string]uint32) (uin
 			regT = 1
 		}
 		return (opcode << 26) | (uint32(inst.Registers[0]) << 21) |
-			(regT << 16) | branchOffset, nil
+			(regT << 16) | ((branchOffset >> 2) & 0xffff), nil
 	}
 
 	if opcode, ok := numberForInstruction(jTypeOpcodes, inst.Name); ok {
@@ -242,7 +242,7 @@ func (inst *Instruction) Encode(instAddr uint32, symbols map[string]uint32) (uin
 		if err != nil {
 			return 0, err
 		}
-		return (opcode << 26) | jumpAddr, nil
+		return (opcode << 26) | (jumpAddr >> 2), nil
 	}
 
 	if opcode, ok := numberForInstruction(memoryOpcodes, inst.Name); ok {
@@ -331,7 +331,7 @@ func instructionJumpBase(inst *Instruction, instAddr uint32,
 		} else if (addr & 0xf0000000) != ((instAddr + 4) & 0xf0000000) {
 			return 0, errors.New("jump address overflows 26 bits")
 		} else {
-			return (addr & 0x0fffffff) >> 2, nil
+			return (addr & 0x0fffffff), nil
 		}
 	} else {
 		addr := inst.CodePointer.Constant
@@ -340,7 +340,7 @@ func instructionJumpBase(inst *Instruction, instAddr uint32,
 		} else if (addr & 3) != 0 {
 			return 0, errors.New("misaligned address")
 		} else {
-			return (addr & 0x0fffffff) >> 2, nil
+			return (addr & 0x0fffffff), nil
 		}
 	}
 }

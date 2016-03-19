@@ -3,7 +3,6 @@ package mips32
 import "testing"
 
 func TestInstCodingProgram(t *testing.T) {
-	// TODO: add the rest of the instructions to this program.
 	code := `
 		NOP
 		ADDIU $r5, $r4, -0x1337
@@ -33,13 +32,35 @@ func TestInstCodingProgram(t *testing.T) {
 		SUBU $r9, $r10, $r31
 		XOR $r2, $r3, $r4
 		XORI $r2, $r3, 666
+        BEQ $r5, $r31, -800
+
+        BGEZ $r17, -0x20000
+        BGTZ $r6, 0x1fffc
+        BLEZ $r18, 800
+        BLTZ $r31, 0
+        BNE $r0, $r31, 4
+
+        J 0x50000
+        JAL 0x50000
+        JALR $r5, $r2
+        JALR $r15
+        JR $r31
+
+        LB $r15, -30($r5)
+        LBU $r17, 30($r30)
+        LW $r1, ($r2)
+        SB $r5, -0x8000($r31)
+        SW $r31, 0x7fff($r5)
 	`
 	words := []uint32{
 		0x00000000, 0x2485ECC9, 0x03ef3021, 0x00a1f824, 0x3051f0f0,
 		0x3c05f0f0, 0x0253880b, 0x0274900a, 0x00430827, 0x00518825,
 		0x3412f007, 0x001209c0, 0x00be1004, 0x00a8782a, 0x28affff6,
 		0x00a8002b, 0x2caffff6, 0x00032bc3, 0x00012807, 0x00032bc2,
-		0x03e12806, 0x015f4823, 0x00641026, 0x3862029a,
+		0x03e12806, 0x015f4823, 0x00641026, 0x3862029a, 0x10bfff38,
+		0x06218000, 0x1cc07fff, 0x1a4000c8, 0x07e00000, 0x141f0001,
+		0x08014000, 0x0c014000, 0x00402809, 0x01e0f809, 0x03e00008,
+		0x80afffe2, 0x93d1001e, 0x8c410000, 0xa3e58000, 0xacbf7fff,
 	}
 	tokenizedLines, err := TokenizeSource(code)
 	if err != nil {
@@ -52,7 +73,8 @@ func TestInstCodingProgram(t *testing.T) {
 		}
 		inst, err := ParseTokenizedInstruction(line.Instruction)
 		if err != nil {
-			t.Error("failed to parse tokenized instruction for line", i)
+
+			t.Error("failed to parse tokenized instruction for line", i, "-", err)
 			continue
 		}
 		encoded, err := inst.Encode(0, nil)
@@ -120,12 +142,24 @@ func TestInstCodingRawWords(t *testing.T) {
 }
 
 func instructionsEquivalent(i1 *Instruction, i2 *Instruction) bool {
-	if len(i1.Registers) != len(i2.Registers) {
-		return false
-	}
-	for i, r := range i1.Registers {
-		if i2.Registers[i] != r {
+	if i1.Name == "JALR" && i2.Name == "JALR" && len(i1.Registers) != len(i2.Registers) {
+		if len(i1.Registers) > len(i2.Registers) {
+			return instructionsEquivalent(i2, i1)
+		}
+		if len(i1.Registers) != 1 || len(i2.Registers) != 2 {
 			return false
+		}
+		if i1.Registers[0] != i2.Registers[1] || i2.Registers[0] != 31 {
+			return false
+		}
+	} else {
+		if len(i1.Registers) != len(i2.Registers) {
+			return false
+		}
+		for i, r := range i1.Registers {
+			if i2.Registers[i] != r {
+				return false
+			}
 		}
 	}
 	if uint16(i1.SignedConstant16)|uint16(i1.UnsignedConstant16) !=
