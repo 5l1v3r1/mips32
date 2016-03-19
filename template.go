@@ -97,5 +97,5 @@ var Templates = []Template{
 	{"SRLV", []ArgumentType{Register, Register, Register}},
 	{"SUBU", []ArgumentType{Register, Register, Register}},
 	{"XOR", []ArgumentType{Register, Register, Register}},
-	{"XORI", []ArgumentType{Register, Register, SignedConstant16}},
+	{"XORI", []ArgumentType{Register, Register, UnsignedConstant16}},
 }

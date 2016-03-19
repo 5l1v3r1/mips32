@@ -1,5 +1,7 @@
 package mips32
 
+import "errors"
+
 var twoOperandImmediateOpcodes = map[uint32]string{
 	0x09: "ADDIU",
 	0x0c: "ANDI",
@@ -96,7 +98,7 @@ func DecodeInstruction(word uint32) *Instruction {
 			}
 		}
 		if instName == "BLTZ" && registerT == 1 {
-			instName = "BGTZ"
+			instName = "BGEZ"
 			registerT = 0
 		}
 		if registerT == 0 {
@@ -167,4 +169,183 @@ func DecodeInstruction(word uint32) *Instruction {
 		Name:    ".word",
 		RawWord: word,
 	}
+}
+
+// Encode returns the 32-bit word representation of this instruction, or an error if the instruction
+// fails to meet any available templates.
+//
+// This method needs the address of the instruction and a symbol table in order to encode control
+// instructions, since it must resolve (potentially relative) symbol addresses.
+func (inst *Instruction) Encode(instAddr uint32, symbols map[string]uint32) (uint32, error) {
+	if inst.Name == ".word" {
+		return inst.RawWord, nil
+	}
+
+	if opcode, ok := numberForInstruction(twoOperandImmediateOpcodes, inst.Name); ok {
+		if len(inst.Registers) != 2 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (opcode << 26) | (uint32(inst.Registers[1]) << 21) |
+			(uint32(inst.Registers[0]) << 16) | uint32(uint16(inst.SignedConstant16)) |
+			uint32(inst.UnsignedConstant16), nil
+	}
+
+	if inst.Name == "LUI" {
+		if len(inst.Registers) != 1 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (luiOpcode << 26) | (uint32(inst.Registers[0]) << 16) |
+			uint32(inst.UnsignedConstant16), nil
+	}
+
+	branchName := inst.Name
+	if branchName == "BGEZ" {
+		branchName = "BLTZ"
+	}
+	if opcode, ok := numberForInstruction(branchOpcodes, branchName); ok {
+		branchOffset, err := instructionBranchOffset(inst, instAddr, symbols)
+		if err != nil {
+			return 0, err
+		}
+		if inst.Name == "BEQ" || inst.Name == "BNE" {
+			if len(inst.Registers) != 2 {
+				return 0, registerCountError(inst.Name)
+			}
+			return (opcode << 26) | (uint32(inst.Registers[0]) << 21) |
+				(uint32(inst.Registers[1]) << 16) | branchOffset, nil
+		}
+		if len(inst.Registers) != 1 {
+			return 0, registerCountError(inst.Name)
+		}
+		var regT uint32
+		if inst.Name == "BGEZ" {
+			regT = 1
+		}
+		return (opcode << 26) | (uint32(inst.Registers[0]) << 21) |
+			(regT << 16) | branchOffset, nil
+	}
+
+	if opcode, ok := numberForInstruction(jTypeOpcodes, inst.Name); ok {
+		if len(inst.Registers) != 0 {
+			return 0, registerCountError(inst.Name)
+		}
+		jumpAddr, err := instructionJumpBase(inst, instAddr, symbols)
+		if err != nil {
+			return 0, err
+		}
+		return (opcode << 26) | jumpAddr, nil
+	}
+
+	if opcode, ok := numberForInstruction(memoryOpcodes, inst.Name); ok {
+		if len(inst.Registers) != 1 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (opcode << 26) | (uint32(inst.MemoryReference.Register) << 21) |
+			(uint32(inst.Registers[0]) << 16) | uint32(uint16(inst.MemoryReference.Offset)), nil
+	}
+
+	if funcField, ok := numberForInstruction(constantShiftFuncs, inst.Name); ok {
+		if len(inst.Registers) != 2 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (uint32(inst.Registers[1]) << 16) | (uint32(inst.Registers[0]) << 11) |
+			(uint32(inst.Constant5) << 6) | funcField, nil
+	}
+
+	if funcField, ok := numberForInstruction(variableShiftFuncs, inst.Name); ok {
+		if len(inst.Registers) != 3 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (uint32(inst.Registers[2]) << 21) | (uint32(inst.Registers[1]) << 16) |
+			(uint32(inst.Registers[0]) << 11) | funcField, nil
+	}
+
+	if funcField, ok := numberForInstruction(threeRegOperandFuncs, inst.Name); ok {
+		if len(inst.Registers) != 3 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (uint32(inst.Registers[1]) << 21) | (uint32(inst.Registers[2]) << 16) |
+			(uint32(inst.Registers[0]) << 11) | funcField, nil
+	}
+
+	if inst.Name == "JR" {
+		if len(inst.Registers) != 1 {
+			return 0, registerCountError(inst.Name)
+		}
+		return (uint32(inst.Registers[0]) << 21) | jrFunc, nil
+	}
+
+	if inst.Name == "JALR" {
+		switch len(inst.Registers) {
+		case 1:
+			return (uint32(inst.Registers[0]) << 21) | (31 << 11) | jalrFunc, nil
+		case 2:
+			return (uint32(inst.Registers[1]) << 21) | (uint32(inst.Registers[0]) << 11) |
+				jalrFunc, nil
+		default:
+			return 0, registerCountError(inst.Name)
+		}
+	}
+
+	return 0, errors.New("unknown instruction: " + inst.Name)
+}
+
+func instructionBranchOffset(inst *Instruction, instAddr uint32,
+	symbols map[string]uint32) (uint32, error) {
+	if inst.CodePointer.Absolute {
+		return 0, errors.New("expecting relative code pointer for " + inst.Name)
+	} else if inst.CodePointer.IsSymbol {
+		if addr, ok := symbols[inst.CodePointer.Symbol]; !ok {
+			return 0, unknownSymbolError(inst.CodePointer.Symbol)
+		} else {
+			diff := (int32(addr) - int32(instAddr+4)) / 4
+			if diff >= 0x8000 || diff < -0x8000 {
+				return 0, errors.New("branch offset out of bounds")
+			}
+			return uint32(uint16(diff)), nil
+		}
+	} else {
+		return inst.CodePointer.Constant, nil
+	}
+}
+
+func instructionJumpBase(inst *Instruction, instAddr uint32,
+	symbols map[string]uint32) (uint32, error) {
+	if !inst.CodePointer.Absolute {
+		return 0, errors.New("expecting absolute code pointer for " + inst.Name)
+	} else if inst.CodePointer.IsSymbol {
+		if addr, ok := symbols[inst.CodePointer.Symbol]; !ok {
+			return 0, unknownSymbolError(inst.CodePointer.Symbol)
+		} else if (addr & 0xf0000000) != ((instAddr + 4) & 0xf0000000) {
+			return 0, errors.New("jump address overflows 26 bits")
+		} else {
+			return (addr & 0x0fffffff) >> 2, nil
+		}
+	} else {
+		addr := inst.CodePointer.Constant
+		if (addr & 0xf0000000) != ((instAddr + 4) & 0xf0000000) {
+			return 0, errors.New("cannot encode jump address in 26 bits")
+		} else if (addr & 3) != 0 {
+			return 0, errors.New("jump address overflows 26 bits")
+		} else {
+			return (addr & 0x0fffffff) >> 2, nil
+		}
+	}
+}
+
+func numberForInstruction(m map[uint32]string, inst string) (uint32, bool) {
+	for number, name := range m {
+		if name == inst {
+			return number, true
+		}
+	}
+	return 0, false
+}
+
+func registerCountError(instName string) error {
+	return errors.New("invalid number of registers for " + instName)
+}
+
+func unknownSymbolError(symbol string) error {
+	return errors.New("unknown symbol: " + symbol)
 }
