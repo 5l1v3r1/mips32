@@ -52,3 +52,52 @@ func TestParseTokenizedInstruction(t *testing.T) {
 		}
 	}
 }
+
+func TestInstructionRender(t *testing.T) {
+	code := `
+		NOP
+		SLL $r5, $r2, 15
+		SLLV $r5, $r6, $r7
+		ADDIU $r5, $r6, -17
+		LUI $r5, 0xBEEF
+		ORI $r5, $r5, 0xDEAD
+		SRLV $r6, $r5, $r7
+		J FOOBAR
+		BEQ $r5, $r31, TEST
+		BEQ $r5, $r31, 0xf000
+		JAL 0xDEADBEEF
+		SB $r5, 15($r3)
+	`
+	lines, err := TokenizeSource(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, line := range lines {
+		if line.Instruction == nil {
+			t.Error("missing instruction for line", i)
+			continue
+		}
+		inst, err := ParseTokenizedInstruction(line.Instruction)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		rendered, err := inst.Render()
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		rendered.LineNumber = line.LineNumber
+		if !rendered.Equal(&line) {
+			t.Error("failed to render line", line, "got", rendered)
+		}
+	}
+
+	inst := &Instruction{Name: ".word", RawWord: 0xf2345678}
+	if rendered, err := inst.Render(); err != nil {
+		t.Error(err)
+	} else if rendered.Directive == nil || rendered.Directive.Name != "word" ||
+		rendered.Directive.Constant != 0xf2345678 {
+		t.Error("bad result:", rendered.Directive)
+	}
+}
