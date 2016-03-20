@@ -73,6 +73,7 @@ func (d *Debugger) runDebugger() {
 		ticker.Stop()
 	}()
 	defer d.updateButtonState(false)
+	d.updateButtonState(true)
 	for {
 		select {
 		case <-ticker.C:
