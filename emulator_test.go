@@ -229,10 +229,11 @@ func TestEmulatorMemory(t *testing.T) {
 }
 
 func TestEmulatorErrors(t *testing.T) {
-	// TODO: add programs for misaligned memory.
 	programs := []string{
 		"ORI $r1, $r0, 3\nJR $r1",
 		"J SYM\nJ SYM1\nNOP\nSYM:\nSYM1:",
+		"ORI $r1, $r0, 3\nSW $r1, ($r1)",
+		"ORI $r1, $r0, 3\nSW $r1, 2($r0)",
 	}
 ProgramLoop:
 	for i, code := range programs {
