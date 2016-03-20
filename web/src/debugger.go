@@ -18,6 +18,7 @@ type Debugger struct {
 
 	registers *Registers
 	codeView  *CodeView
+	errorView *js.Object
 }
 
 func NewDebugger() *Debugger {
@@ -34,6 +35,7 @@ func NewDebugger() *Debugger {
 		},
 		registers: NewRegisters(),
 		codeView:  NewCodeView(),
+		errorView: js.Global.Get("debugger-error"),
 	}
 
 	go res.debugLoop()
@@ -84,6 +86,7 @@ func (d *Debugger) runDebugger() {
 	}()
 	defer d.updateButtonState(false)
 	d.updateButtonState(true)
+	d.hideError()
 	for {
 		select {
 		case <-ticker.C:
@@ -122,14 +125,23 @@ func (d *Debugger) stepDebugger() {
 	if err != nil {
 		d.handleError(err)
 	} else {
+		d.hideError()
 		d.updateUI()
 	}
 }
 
 func (d *Debugger) handleError(err error) {
-	// TODO: show error here.
 	d.updateButtonState(false)
-	println("error:", err.Error())
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.errorView.Set("innerText", err.Error())
+	d.errorView.Set("className", "error-view showing-error")
+}
+
+func (d *Debugger) hideError() {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.errorView.Set("className", "error-view")
 }
 
 func (d *Debugger) updateUI() {
@@ -187,6 +199,7 @@ func (d *Debugger) registerUIEvents() {
 	})
 
 	js.Global.Get("debugger-reset").Call("addEventListener", "click", func() {
+		d.hideError()
 		d.controlChan <- stopDebugger
 		d.lock.Lock()
 		d.emulator = &mips32.Emulator{
