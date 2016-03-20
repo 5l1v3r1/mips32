@@ -10,19 +10,45 @@ import (
 	"github.com/unixpickle/mips32"
 )
 
-func DisassembleData() {
-	textarea := js.Global.Get("disassembler-data")
-	text := textarea.Get("value").String()
+type Disassembler struct {
+	textarea  *js.Object
+	errorView *js.Object
+}
+
+func NewDisassembler() *Disassembler {
+	res := &Disassembler{
+		textarea:  js.Global.Get("disassembler-code"),
+		errorView: js.Global.Get("disassembler-error"),
+	}
+	js.Global.Get("disassembler-button").Call("addEventListener", "click", res.disassemble)
+	return res
+}
+
+func (d *Disassembler) SetData(data []uint32) {
+	spacedValues := make([]string, len(data))
+	for i, d := range data {
+		numStr := strconv.FormatUint(uint64(d), 16)
+		for len(numStr) < 8 {
+			numStr = "0" + numStr
+		}
+		spacedValues[i] = numStr
+	}
+
+	d.textarea.Set("value", strings.Join(spacedValues, " "))
+}
+
+func (d *Disassembler) disassemble() {
+	text := d.textarea.Get("value").String()
 	text = strings.Replace(text, " ", "", -1)
 	text = strings.Replace(text, "\n", "", -1)
 	text = strings.Replace(text, "\t", "", -1)
 
 	data, err := hex.DecodeString(text)
 	if err != nil {
-		showDisassemblerError(err)
+		d.showError(err)
 		return
 	} else if len(data)%4 != 0 {
-		showDisassemblerError(errors.New("binary data's size must be a multiple of 32-bits"))
+		d.showError(errors.New("binary data's size must be a multiple of 32-bits"))
 		return
 	}
 
@@ -34,39 +60,22 @@ func DisassembleData() {
 		instructions[i/4] = mips32.DecodeInstruction(word)
 		rendering, err := instructions[i/4].Render()
 		if err != nil {
-			showDisassemblerError(err)
+			d.showError(err)
 			return
 		}
 		instStrs[i/4] = rendering.String()
 	}
 
-	hideDisassemblerError()
-	SetAssemblerCode(strings.Join(instStrs, "\n"))
-	ShowAssembler()
+	d.hideError()
+	GlobalAssembler.SetCode(strings.Join(instStrs, "\n"))
+	GlobalAssembler.Show()
 }
 
-func SetDisassemblerData(data []uint32) {
-	textarea := js.Global.Get("assembler-code")
-
-	spacedValues := make([]string, len(data))
-	for i, d := range data {
-		numStr := strconv.FormatUint(uint64(d), 16)
-		for len(numStr) < 8 {
-			numStr = "0" + numStr
-		}
-		spacedValues[i] = numStr
-	}
-
-	textarea.Set("value", strings.Join(spacedValues, " "))
+func (d *Disassembler) hideError() {
+	d.errorView.Set("className", "error-view")
 }
 
-func hideDisassemblerError() {
-	errField := js.Global.Get("disassembler-error")
-	errField.Set("className", "error-view")
-}
-
-func showDisassemblerError(err error) {
-	errField := js.Global.Get("disassembler-error")
-	errField.Set("className", "error-view showing-error")
-	errField.Set("innerText", err.Error())
+func (d *Disassembler) showError(err error) {
+	d.errorView.Set("className", "error-view showing-error")
+	d.errorView.Set("innerText", err.Error())
 }

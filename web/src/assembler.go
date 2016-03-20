@@ -5,42 +5,52 @@ import (
 	"github.com/unixpickle/mips32"
 )
 
-func AssembleCode() {
-	textarea := js.Global.Get("assembler-code")
-	text := textarea.Get("value").String()
+type Assembler struct {
+	textarea  *js.Object
+	errorView *js.Object
+}
+
+func NewAssembler() *Assembler {
+	res := &Assembler{
+		textarea:  js.Global.Get("assembler-code"),
+		errorView: js.Global.Get("assembler-error"),
+	}
+	js.Global.Get("assembler-button").Call("addEventListener", "click", res.assemble)
+	return res
+}
+
+func (a *Assembler) SetCode(code string) {
+	a.textarea.Set("value", code)
+	a.hideError()
+}
+
+func (a *Assembler) Show() {
+	js.Global.Get("location").Set("hash", "#assembler")
+}
+
+func (a *Assembler) assemble() {
+	text := a.textarea.Get("value").String()
 
 	lines, err := mips32.TokenizeSource(text)
 	if err != nil {
-		showAssemblerError(err)
+		a.showError(err)
 		return
 	}
 	exc, err := mips32.ParseExecutable(lines)
 	if err != nil {
-		showAssemblerError(err)
+		a.showError(err)
 		return
 	}
-	hideAssemblerError()
+	a.hideError()
 	GlobalDebugger.SetExecutable(exc)
 	GlobalDebugger.Show()
 }
 
-func SetAssemblerCode(code string) {
-	textarea := js.Global.Get("assembler-code")
-	textarea.Set("value", code)
-	hideAssemblerError()
+func (a *Assembler) hideError() {
+	a.errorView.Set("className", "error-view")
 }
 
-func ShowAssembler() {
-	js.Global.Get("location").Set("hash", "#assembler")
-}
-
-func hideAssemblerError() {
-	errField := js.Global.Get("assembler-error")
-	errField.Set("className", "error-view")
-}
-
-func showAssemblerError(err error) {
-	errField := js.Global.Get("assembler-error")
-	errField.Set("className", "error-view showing-error")
-	errField.Set("innerText", err.Error())
+func (a *Assembler) showError(err error) {
+	a.errorView.Set("className", "error-view showing-error")
+	a.errorView.Set("innerText", err.Error())
 }
