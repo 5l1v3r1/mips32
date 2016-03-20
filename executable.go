@@ -144,6 +144,30 @@ func (e *Executable) Render() (list []TokenizedLine, err error) {
 	return
 }
 
+// End returns the pointer to the first byte that is completely past any instruction data.
+// Once a program starts executing instructions at or past End(), no more instructions will be seen.
+func (e *Executable) End() uint32 {
+	var lastAddr uint32
+	for segStart, insts := range e.Segments {
+		end := segStart + uint32(len(insts)*4)
+		if end > lastAddr {
+			lastAddr = end
+		}
+	}
+	return lastAddr
+}
+
+// Get returns the instruction at a given pointer, or nil if no instruction exists at that pointer.
+func (e *Executable) Get(addr uint32) *Instruction {
+	for segStart, insts := range e.Segments {
+		end := segStart + uint32(len(insts)*4)
+		if segStart <= addr && end > addr {
+			return &insts[(addr-segStart)>>2]
+		}
+	}
+	return nil
+}
+
 // addressInUse reports of a word-aligned address is being used by one of the segments.
 func (e *Executable) addressInUse(addr uint32) bool {
 	for segment, insts := range e.Segments {
