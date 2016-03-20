@@ -42,7 +42,7 @@ type MemoryReference struct {
 }
 
 // An ArgToken represents a register, a number, a symbol, or a memory location.
-// For instance, the instruction "SB $5, 5($6)" contains three tokens.
+// For instance, the instruction "SB $5, 5($6)" contains two tokens.
 //
 // An ArgToken may be able to serve as multiple types of arguments.
 // For example, the ArgToken for "0x5" could be a Constant5, a Constant16, or a CodePointer.
