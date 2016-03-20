@@ -1,6 +1,9 @@
 package mips32
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+)
 
 type RegisterFile [32]uint32
 
@@ -10,16 +13,28 @@ type Emulator struct {
 	Executable     *Executable
 	ProgramCounter uint32
 
-	DelaySlot  bool
+	LittleEndian      bool
+	ForceMemAlignment bool
+
+	// DelaySlot is set during and after an instruction in the delay slot is executed.
+	DelaySlot bool
+
+	// JumpNext is set if a jump/branch instruction was just executed and the delay slot's PC is in
+	// the ProgramCounter field.
+	JumpNext bool
+
+	// JumpTarget is the target location for the jump/branch referred to by JumpNext.
 	JumpTarget uint32
 }
 
 func (e *Emulator) Step() error {
 	inst := e.Executable.Get(e.ProgramCounter)
-	if e.DelaySlot {
-		e.DelaySlot = false
+	if e.JumpNext {
+		e.DelaySlot = true
+		e.JumpNext = false
 		e.ProgramCounter = e.JumpTarget
 	} else {
+		e.DelaySlot = false
 		e.ProgramCounter += 4
 	}
 
@@ -56,17 +71,114 @@ func (e *Emulator) Step() error {
 }
 
 func (e *Emulator) executeBranch(inst *Instruction) error {
-	// TODO: this.
+	if e.DelaySlot {
+		return errors.New("branch in delay slot yields unpredictable behavior")
+	}
+
+	offset, err := instructionBranchOffset(inst, e.ProgramCounter-4, e.Executable.Symbols)
+	if err != nil {
+		return e.instructionError(err.Error())
+	}
+	e.JumpTarget = e.ProgramCounter + offset
+
+	val1 := int32(e.RegisterFile[inst.Registers[0]])
+	switch inst.Name {
+	case "BEQ", "BNE":
+		val2 := int32(e.RegisterFile[inst.Registers[1]])
+		e.JumpNext = (val1 == val2) == (inst.Name == "BEQ")
+	case "BGEZ":
+		e.JumpNext = val1 >= 0
+	case "BGTZ":
+		e.JumpNext = val1 > 0
+	case "BLEZ":
+		e.JumpNext = val1 <= 0
+	case "BLTZ":
+		e.JumpNext = val1 < 0
+	}
+
 	return nil
 }
 
 func (e *Emulator) executeJump(inst *Instruction) error {
-	// TODO: this.
+	if e.DelaySlot {
+		return errors.New("jump in delay slot yields unpredictable behavior")
+	}
+
+	if inst.Name == "J" || inst.Name == "JAL" {
+		offset, err := instructionJumpBase(inst, e.ProgramCounter-4, e.Executable.Symbols)
+		if err != nil {
+			return e.instructionError(err.Error())
+		}
+		e.JumpTarget = (e.ProgramCounter & 0xf0000000) | offset
+		e.JumpNext = true
+
+		if inst.Name == "JAL" {
+			e.RegisterFile[31] = e.ProgramCounter + 4
+		}
+	} else {
+		newAddress := e.RegisterFile[inst.Registers[len(inst.Registers)-1]]
+		if (newAddress & 3) != 0 {
+			return e.instructionError("misaligned address")
+		}
+		e.JumpTarget = newAddress
+		e.JumpNext = true
+
+		if inst.Name == "JALR" {
+			destReg := 31
+			if len(inst.Registers) == 2 {
+				destReg = inst.Registers[0]
+			}
+			e.RegisterFile[destReg] = e.ProgramCounter + 4
+		}
+	}
+
 	return nil
 }
 
 func (e *Emulator) executeMemory(inst *Instruction) error {
-	// TODO: this.
+	address := e.RegisterFile[inst.MemoryReference.Register] + uint32(inst.MemoryReference.Offset)
+	register := inst.Registers[0]
+	registerValue := e.RegisterFile[register]
+
+	switch inst.Name {
+	case "LB":
+		e.RegisterFile[register] = uint32(int8(e.Memory.Get(address)))
+	case "LBU":
+		e.RegisterFile[register] = uint32(e.Memory.Get(address))
+	case "LW":
+		if e.ForceMemAlignment && (address&3) != 0 {
+			return e.instructionError("misaligned load word: 0x" +
+				strconv.FormatUint(uint64(address), 16))
+		}
+		if e.LittleEndian {
+			e.RegisterFile[register] = (uint32(e.Memory.Get(address+3)) << 24) |
+				(uint32(e.Memory.Get(address+2)) << 16) | (uint32(e.Memory.Get(address+1)) << 8) |
+				uint32(e.Memory.Get(address))
+		} else {
+			e.RegisterFile[register] = (uint32(e.Memory.Get(address)) << 24) |
+				(uint32(e.Memory.Get(address+1)) << 16) | (uint32(e.Memory.Get(address+2)) << 8) |
+				uint32(e.Memory.Get(address+3))
+		}
+	case "SB":
+		e.Memory.Set(address, byte(registerValue))
+	case "SW":
+		if e.ForceMemAlignment && (address&3) != 0 {
+			return e.instructionError("misaligned store word: 0x" +
+				strconv.FormatUint(uint64(address), 16))
+		}
+		if e.LittleEndian {
+			e.Memory.Set(address+3, byte(registerValue>>24))
+			e.Memory.Set(address+2, byte(registerValue>>16))
+			e.Memory.Set(address+1, byte(registerValue>>8))
+			e.Memory.Set(address, byte(registerValue))
+		} else {
+			e.Memory.Set(address, byte(registerValue>>24))
+			e.Memory.Set(address+1, byte(registerValue>>16))
+			e.Memory.Set(address+2, byte(registerValue>>8))
+			e.Memory.Set(address+3, byte(registerValue))
+		}
+	}
+
 	return nil
 }
 
@@ -74,6 +186,7 @@ func (e *Emulator) executeRegisterArithmetic(inst *Instruction) {
 	if inst.Registers[0] == 0 {
 		return
 	}
+
 	val1 := e.RegisterFile[inst.Registers[1]]
 	val2 := e.RegisterFile[inst.Registers[2]]
 	var result uint32
@@ -84,9 +197,8 @@ func (e *Emulator) executeRegisterArithmetic(inst *Instruction) {
 		result = val1 & val2
 	case "OR":
 		result = val1 | val2
-		fallthrough
 	case "NOR":
-		result = ^result
+		result = ^(val1 | val2)
 	case "SUBU":
 		result = val1 - val2
 	case "XOR":
@@ -221,4 +333,10 @@ func (e *Emulator) executeConditionalMove(inst *Instruction) {
 		value := e.RegisterFile[inst.Registers[1]]
 		e.RegisterFile[inst.Registers[0]] = value
 	}
+}
+
+func (e *Emulator) instructionError(msg string) error {
+	pc := e.ProgramCounter - 4
+	pcStr := "0x" + strconv.FormatUint(uint64(pc), 16)
+	return errors.New("error at " + pcStr + ": " + msg)
 }
