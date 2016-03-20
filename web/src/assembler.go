@@ -24,13 +24,23 @@ func AssembleCode() {
 	println(exc)
 }
 
+func SetAssemblerCode(code string) {
+	textarea := js.Global.Get("assembler-code")
+	textarea.Set("value", code)
+	hideAssemblerError()
+}
+
+func ShowAssembler() {
+	js.Global.Get("location").Set("hash", "#assembler")
+}
+
 func hideAssemblerError() {
 	errField := js.Global.Get("assembler-error")
-	errField.Set("className", "")
+	errField.Set("className", "error-view")
 }
 
 func showAssemblerError(err error) {
 	errField := js.Global.Get("assembler-error")
-	errField.Set("className", "showing-error")
+	errField.Set("className", "error-view showing-error")
 	errField.Set("innerText", err.Error())
 }

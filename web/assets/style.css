@@ -109,3 +109,13 @@ button {
 button:active {
   color: black;
 }
+
+.error-view {
+  display: none;
+  margin-top: 10px;
+  color: red;
+}
+
+.showing-error {
+  display: block;
+}
