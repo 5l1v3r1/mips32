@@ -24,18 +24,24 @@ func NewDebugger() *Debugger {
 	res := &Debugger{
 		frequency:   4,
 		controlChan: make(chan debuggerCommand, 0),
-		emulator:    nil,
-		registers:   NewRegisters(),
-		codeView:    NewCodeView(),
+		emulator: &mips32.Emulator{
+			Memory: mips32.NewLazyMemory(),
+			Executable: &mips32.Executable{
+				Segments: map[uint32][]mips32.Instruction{},
+				Symbols:  map[string]uint32{},
+			},
+			LittleEndian: true,
+		},
+		registers: NewRegisters(),
+		codeView:  NewCodeView(),
 	}
+
 	go res.debugLoop()
 
 	res.registers.SetCallback(func(reg int, val uint32) {
 		res.lock.Lock()
 		defer res.lock.Unlock()
-		if res.emulator != nil {
-			res.emulator.RegisterFile[reg] = val
-		}
+		res.emulator.RegisterFile[reg] = val
 	})
 
 	res.registerUIEvents()
@@ -87,10 +93,6 @@ func (d *Debugger) runDebugger() {
 			}
 		}
 		d.lock.Lock()
-		if d.emulator == nil {
-			d.lock.Unlock()
-			continue
-		}
 		for i := 0; i < cyclesPerFrame; i++ {
 			err := d.emulator.Step()
 			if err != nil {
@@ -111,10 +113,6 @@ func (d *Debugger) runDebugger() {
 
 func (d *Debugger) stepDebugger() {
 	d.lock.Lock()
-	if d.emulator == nil {
-		d.lock.Unlock()
-		return
-	}
 	err := d.emulator.Step()
 	d.lock.Unlock()
 	if err != nil {
@@ -134,13 +132,8 @@ func (d *Debugger) updateUI() {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	if d.emulator != nil {
-		d.registers.Update(d.emulator.RegisterFile)
-		d.codeView.Update(d.emulator)
-	} else {
-		d.registers.Update(mips32.RegisterFile{})
-		d.codeView.Update(&mips32.Emulator{Executable: &mips32.Executable{}})
-	}
+	d.registers.Update(d.emulator.RegisterFile)
+	d.codeView.Update(d.emulator)
 }
 
 func (d *Debugger) updateButtonState(running bool) {
@@ -192,12 +185,10 @@ func (d *Debugger) registerUIEvents() {
 	js.Global.Get("debugger-reset").Call("addEventListener", "click", func() {
 		d.controlChan <- stopDebugger
 		d.lock.Lock()
-		if d.emulator != nil {
-			d.emulator = &mips32.Emulator{
-				Memory:       mips32.NewLazyMemory(),
-				Executable:   d.emulator.Executable,
-				LittleEndian: true,
-			}
+		d.emulator = &mips32.Emulator{
+			Memory:       mips32.NewLazyMemory(),
+			Executable:   d.emulator.Executable,
+			LittleEndian: true,
 		}
 		d.lock.Unlock()
 		d.updateUI()
