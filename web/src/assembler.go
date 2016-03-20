@@ -21,6 +21,7 @@ func AssembleCode() {
 	}
 	hideAssemblerError()
 	GlobalDebugger.SetExecutable(exc)
+	GlobalDebugger.Show()
 }
 
 func SetAssemblerCode(code string) {

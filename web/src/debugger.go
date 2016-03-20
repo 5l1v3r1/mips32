@@ -62,6 +62,10 @@ func (d *Debugger) SetExecutable(e *mips32.Executable) {
 	d.updateUI()
 }
 
+func (d *Debugger) Show() {
+	js.Global.Get("location").Set("hash", "#debugger")
+}
+
 func (d *Debugger) debugLoop() {
 	for command := range d.controlChan {
 		if command == stepDebugger {
