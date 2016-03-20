@@ -40,23 +40,9 @@ func TestEmulatorRegModifiers(t *testing.T) {
 		XOR $28, $1, $2          # $r28 = 0xC0FE5B4D
 		XORI $29, $1, 0xffff     # $r29 = 0xca6d73b9
 	`
-	lines, err := TokenizeSource(code)
+	emulator, err := runTestProgram(code)
 	if err != nil {
 		t.Fatal(err)
-	}
-	program, err := ParseExecutable(lines)
-	if err != nil {
-		t.Fatal(err)
-	}
-	memory := NewLazyMemory()
-	emulator := &Emulator{
-		Memory:     memory,
-		Executable: program,
-	}
-	for !emulator.Done() {
-		if err := emulator.Step(); err != nil {
-			t.Fatal(err)
-		}
 	}
 	regFile := RegisterFile{0, 0xca6d8c46, 0x0a93d70b, 0xCA6D9F6D, 0xD5016351, 0xA018402,
 		0xca6d8c46, 0, 0, 0xca6d8c46, 0x350020b0, 0xCAFFDF4F, 0xCA6DDF4F, 0x6c623000, 0x6c623000, 1,
@@ -110,23 +96,9 @@ func TestEmulatorJumps(t *testing.T) {
 		SYM5: # 0xDEADBEEC
 		LUI $17, 1337            # $r17 = 0x05390000
 	`
-	lines, err := TokenizeSource(code)
+	emulator, err := runTestProgram(code)
 	if err != nil {
 		t.Fatal(err)
-	}
-	program, err := ParseExecutable(lines)
-	if err != nil {
-		t.Fatal(err)
-	}
-	memory := NewLazyMemory()
-	emulator := &Emulator{
-		Memory:     memory,
-		Executable: program,
-	}
-	for !emulator.Done() {
-		if err := emulator.Step(); err != nil {
-			t.Fatal(err)
-		}
 	}
 	regFile := RegisterFile{1: 0xca6d8c46, 2: 0x0a93d70b, 4: 0xC0FE5B4D, 6: 56, 7: 0xA018402, 9: 72,
 		10: 68, 11: 0xA018402, 13: 0xDEADBEEC, 14: 0x6c623000, 17: 0x05390000, 31: 36}
@@ -135,4 +107,26 @@ func TestEmulatorJumps(t *testing.T) {
 			t.Error("bad register", i, "-", emulator.RegisterFile[i])
 		}
 	}
+}
+
+func runTestProgram(code string) (*Emulator, error) {
+	lines, err := TokenizeSource(code)
+	if err != nil {
+		return nil, err
+	}
+	program, err := ParseExecutable(lines)
+	if err != nil {
+		return nil, err
+	}
+	memory := NewLazyMemory()
+	emulator := &Emulator{
+		Memory:     memory,
+		Executable: program,
+	}
+	for !emulator.Done() {
+		if err := emulator.Step(); err != nil {
+			return nil, err
+		}
+	}
+	return emulator, nil
 }
