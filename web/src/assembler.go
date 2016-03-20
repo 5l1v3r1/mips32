@@ -66,5 +66,5 @@ func (a *Assembler) hideError() {
 
 func (a *Assembler) showError(err error) {
 	a.errorView.Set("className", "error-view showing-error")
-	a.errorView.Set("innerText", err.Error())
+	a.errorView.Set("textContent", err.Error())
 }

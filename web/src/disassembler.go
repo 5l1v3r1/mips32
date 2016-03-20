@@ -77,5 +77,5 @@ func (d *Disassembler) hideError() {
 
 func (d *Disassembler) showError(err error) {
 	d.errorView.Set("className", "error-view showing-error")
-	d.errorView.Set("innerText", err.Error())
+	d.errorView.Set("textContent", err.Error())
 }

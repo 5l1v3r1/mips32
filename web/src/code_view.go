@@ -38,7 +38,7 @@ func createCodeViewLine(e *mips32.Emulator, addr uint32) *js.Object {
 	row := document.Call("createElement", "tr")
 
 	addrColumn := document.Call("createElement", "td")
-	addrColumn.Set("innerText", format32BitHex(addr))
+	addrColumn.Set("textContent", format32BitHex(addr))
 	addrColumn.Set("className", "debugger-code-view-addr")
 	row.Call("appendChild", addrColumn)
 
@@ -47,12 +47,12 @@ func createCodeViewLine(e *mips32.Emulator, addr uint32) *js.Object {
 	if inst := e.Executable.Get(addr); inst != nil {
 		rendering, err := inst.Render()
 		if err != nil {
-			codeColumn.Set("innerText", "(Unknown)")
+			codeColumn.Set("textContent", "(Unknown)")
 		} else {
-			codeColumn.Set("innerText", rendering.String())
+			codeColumn.Set("textContent", rendering.String())
 		}
 	} else {
-		codeColumn.Set("innerText", "NOP")
+		codeColumn.Set("textContent", "NOP")
 	}
 	row.Call("appendChild", codeColumn)
 
@@ -61,12 +61,12 @@ func createCodeViewLine(e *mips32.Emulator, addr uint32) *js.Object {
 	if inst := e.Executable.Get(addr); inst != nil {
 		opcode, err := inst.Encode(addr, e.Executable.Symbols)
 		if err != nil {
-			opcodeColumn.Set("innerText", "(invalid)")
+			opcodeColumn.Set("textContent", "(invalid)")
 		} else {
-			opcodeColumn.Set("innerText", format32BitHex(opcode))
+			opcodeColumn.Set("textContent", format32BitHex(opcode))
 		}
 	} else {
-		opcodeColumn.Set("innerText", format32BitHex(0))
+		opcodeColumn.Set("textContent", format32BitHex(0))
 	}
 	row.Call("appendChild", opcodeColumn)
 

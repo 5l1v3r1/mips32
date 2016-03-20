@@ -26,7 +26,7 @@ func NewEntryPopup(prompt string, callback func(i uint32)) {
 
 	titleElement := document.Call("createElement", "label")
 	titleElement.Set("className", "popup-prompt")
-	titleElement.Set("innerText", prompt)
+	titleElement.Set("textContent", prompt)
 	e.popupElement.Call("appendChild", titleElement)
 
 	e.inputElement = document.Call("createElement", "input")
@@ -38,12 +38,12 @@ func NewEntryPopup(prompt string, callback func(i uint32)) {
 
 	cancelButton := document.Call("createElement", "button")
 	cancelButton.Set("className", "popup-button popup-cancel")
-	cancelButton.Set("innerText", "Cancel")
+	cancelButton.Set("textContent", "Cancel")
 	e.popupElement.Call("appendChild", cancelButton)
 
 	okButton := document.Call("createElement", "button")
 	okButton.Set("className", "popup-button popup-ok")
-	okButton.Set("innerText", "OK")
+	okButton.Set("textContent", "OK")
 	e.popupElement.Call("appendChild", okButton)
 
 	e.shieldElement.Call("addEventListener", "click", e.close)

@@ -134,7 +134,7 @@ func (d *Debugger) handleError(err error) {
 	d.updateButtonState(false)
 	d.lock.Lock()
 	defer d.lock.Unlock()
-	d.errorView.Set("innerText", err.Error())
+	d.errorView.Set("textContent", err.Error())
 	d.errorView.Set("className", "error-view showing-error")
 }
 
@@ -158,9 +158,9 @@ func (d *Debugger) updateButtonState(running bool) {
 
 	button := js.Global.Get("debugger-play")
 	if running {
-		button.Set("innerText", "Stop")
+		button.Set("textContent", "Stop")
 	} else {
-		button.Set("innerText", "Play")
+		button.Set("textContent", "Play")
 	}
 }
 
@@ -181,7 +181,7 @@ func (d *Debugger) registerUIEvents() {
 
 	playButton := js.Global.Get("debugger-play")
 	playButton.Call("addEventListener", "click", func() {
-		if playButton.Get("innerText").String() == "Stop" {
+		if playButton.Get("textContent").String() == "Stop" {
 			d.controlChan <- stopDebugger
 		} else {
 			d.controlChan <- startDebugger
