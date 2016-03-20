@@ -133,7 +133,7 @@ func (t *TokenizedInstruction) String() string {
 			}
 		}
 		if len(argStrings) > 0 {
-			return t.Name + " " + strings.Join(argStrings, " ")
+			return t.Name + " " + strings.Join(argStrings, ", ")
 		} else {
 			return t.Name
 		}
