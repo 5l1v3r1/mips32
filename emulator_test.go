@@ -183,6 +183,51 @@ func TestEmulatorBranches(t *testing.T) {
 	}
 }
 
+func TestEmulatorMemory(t *testing.T) {
+	code := `
+		# Seed the program with two random numbers.
+		LUI $1, 0xca46
+		ORI $1, $1, 0x8c6d       # $r1 = 0xca468c6d
+		LUI $2, 0x0a0b
+		ORI $2, $2, 0xd793       # $r2 = 0x0a0bd793
+
+		SB $1, ($0)
+		SW $2, 4($0)
+		SB $2, ($1)
+		SW $1, 1($2)
+
+		LB $3, ($0)              # $r3 = 0x6d
+		LW $4, 4($0)             # $r4 = 0x0a0bd793
+		LB $5, ($1)              # $r5 = 0xffffff93
+		LW $6, 1($2)             # $r6 = 0xca468c6d
+		LBU $7, ($1)             # $r7 = 0x93
+		LBU $8, ($0)             # $r8 = 0x6d
+		LBU $9, 4($0)            # $r9 = {BE: 0x0a, LE: 0x93}
+		LBU $10, 5($0)           # $r10 = {BE: 0x0b, LE: 0xd7}
+		LBU $11, 6($0)           # $r11 = {BE: 0xd7, LE: 0x0b}
+		LBU $12, 7($0)           # $r12 = {BE: 0x93, LE: 0x0a}
+	`
+	results := map[bool]RegisterFile{
+		true: RegisterFile{1: 0xca468c6d, 2: 0x0a0bd793, 3: 0x6d, 4: 0x0a0bd793, 5: 0xffffff93,
+			6: 0xca468c6d, 7: 0x93, 8: 0x6d, 9: 0x93, 10: 0xd7, 11: 0x0b, 12: 0x0a},
+		false: RegisterFile{1: 0xca468c6d, 2: 0x0a0bd793, 3: 0x6d, 4: 0x0a0bd793, 5: 0xffffff93,
+			6: 0xca468c6d, 7: 0x93, 8: 0x6d, 9: 0x0a, 10: 0x0b, 11: 0xd7, 12: 0x93},
+	}
+	for _, littleEndian := range []bool{false, true} {
+		emulator, err := runTestProgramEndianness(code, littleEndian)
+		if err != nil {
+			t.Error(littleEndian, "-", err)
+			continue
+		}
+		regFile := results[littleEndian]
+		for i := 0; i < 32; i++ {
+			if regFile[i] != emulator.RegisterFile[i] {
+				t.Error(littleEndian, "- bad register", i, "-", emulator.RegisterFile[i])
+			}
+		}
+	}
+}
+
 func TestEmulatorErrors(t *testing.T) {
 	// TODO: add programs for misaligned memory.
 	programs := []string{
@@ -217,6 +262,10 @@ ProgramLoop:
 }
 
 func runTestProgram(code string) (*Emulator, error) {
+	return runTestProgramEndianness(code, false)
+}
+
+func runTestProgramEndianness(code string, little bool) (*Emulator, error) {
 	lines, err := TokenizeSource(code)
 	if err != nil {
 		return nil, err
@@ -227,8 +276,9 @@ func runTestProgram(code string) (*Emulator, error) {
 	}
 	memory := NewLazyMemory()
 	emulator := &Emulator{
-		Memory:     memory,
-		Executable: program,
+		Memory:       memory,
+		Executable:   program,
+		LittleEndian: little,
 	}
 	for !emulator.Done() {
 		if err := emulator.Step(); err != nil {
