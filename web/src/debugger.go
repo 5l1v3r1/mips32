@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ type Debugger struct {
 func NewDebugger() *Debugger {
 	res := &Debugger{
 		frequency:   4,
-		controlChan: make(chan debuggerCommand, 1),
+		controlChan: make(chan debuggerCommand, 0),
 		emulator:    nil,
 		registers:   NewRegisters(),
 		codeView:    NewCodeView(),
@@ -37,13 +38,13 @@ func NewDebugger() *Debugger {
 		}
 	})
 
-	// TODO: register events from buttons, etc.
-
+	res.registerUIEvents()
 	res.updateUI()
+
 	return res
 }
 
-func (d *Debugger) ChangeExecutable(e *mips32.Executable) {
+func (d *Debugger) SetExecutable(e *mips32.Executable) {
 	d.controlChan <- stopDebugger
 	d.lock.Lock()
 	d.emulator = &mips32.Emulator{
@@ -68,7 +69,9 @@ func (d *Debugger) debugLoop() {
 func (d *Debugger) runDebugger() {
 	frameDuration, cyclesPerFrame := d.tickInfo()
 	ticker := time.NewTicker(frameDuration)
-	defer ticker.Stop()
+	defer func() {
+		ticker.Stop()
+	}()
 	defer d.updateButtonState(false)
 	for {
 		select {
@@ -76,6 +79,10 @@ func (d *Debugger) runDebugger() {
 		case msg := <-d.controlChan:
 			if msg == stopDebugger {
 				return
+			} else if msg == updateDebuggerFreq {
+				ticker.Stop()
+				frameDuration, cyclesPerFrame = d.tickInfo()
+				ticker = time.NewTicker(frameDuration)
 			}
 		}
 		d.lock.Lock()
@@ -111,6 +118,8 @@ func (d *Debugger) stepDebugger() {
 	d.lock.Unlock()
 	if err != nil {
 		d.handleError(err)
+	} else {
+		d.updateUI()
 	}
 }
 
@@ -155,10 +164,50 @@ func (d *Debugger) tickInfo() (framePause time.Duration, instsPerFrame int) {
 	}
 }
 
+func (d *Debugger) registerUIEvents() {
+	js.Global.Get("debugger-step").Call("addEventListener", "click", func() {
+		d.controlChan <- stepDebugger
+	})
+
+	playButton := js.Global.Get("debugger-play")
+	playButton.Call("addEventListener", "click", func() {
+		if playButton.Get("innerText").String() == "Stop" {
+			d.controlChan <- stopDebugger
+		} else {
+			d.controlChan <- startDebugger
+		}
+	})
+
+	ratePicker := js.Global.Get("debugger-rate")
+	ratePicker.Call("addEventListener", "change", func() {
+		rate := ratePicker.Get("value").String()
+		num, _ := strconv.Atoi(rate)
+		d.lock.Lock()
+		d.frequency = num
+		d.lock.Unlock()
+		d.controlChan <- updateDebuggerFreq
+	})
+
+	js.Global.Get("debugger-reset").Call("addEventListener", "click", func() {
+		d.controlChan <- stopDebugger
+		d.lock.Lock()
+		if d.emulator != nil {
+			d.emulator = &mips32.Emulator{
+				Memory:       mips32.NewLazyMemory(),
+				Executable:   d.emulator.Executable,
+				LittleEndian: true,
+			}
+		}
+		d.lock.Unlock()
+		d.updateUI()
+	})
+}
+
 type debuggerCommand int
 
 const (
 	stopDebugger debuggerCommand = iota
 	startDebugger
 	stepDebugger
+	updateDebuggerFreq
 )

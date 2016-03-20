@@ -20,8 +20,7 @@ func AssembleCode() {
 		return
 	}
 	hideAssemblerError()
-	// TODO: something.
-	println(exc)
+	GlobalDebugger.SetExecutable(exc)
 }
 
 func SetAssemblerCode(code string) {

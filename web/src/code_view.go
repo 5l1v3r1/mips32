@@ -22,7 +22,7 @@ func (c *CodeView) Update(e *mips32.Emulator) {
 	if (e.ProgramCounter / 4) > (PreviewLineCount / 2) {
 		startAddress = e.ProgramCounter - (PreviewLineCount/2)*4
 	}
-	c.element.Set("innerHTML", "")
+	c.element.Set("innerHTML", "<tr><td>Addr</td><td>Assembly</td><td>Code</td></tr>")
 	for i := 0; i < PreviewLineCount; i++ {
 		addr := startAddress + uint32(i*4)
 		row := createCodeViewLine(e, addr)
@@ -61,13 +61,14 @@ func createCodeViewLine(e *mips32.Emulator, addr uint32) *js.Object {
 	if inst := e.Executable.Get(addr); inst != nil {
 		opcode, err := inst.Encode(addr, e.Executable.Symbols)
 		if err != nil {
-			codeColumn.Set("innerText", "(invalid)")
+			opcodeColumn.Set("innerText", "(invalid)")
 		} else {
-			codeColumn.Set("innerText", format32BitHex(opcode))
+			opcodeColumn.Set("innerText", format32BitHex(opcode))
 		}
 	} else {
-		codeColumn.Set("innerText", format32BitHex(0))
+		opcodeColumn.Set("innerText", format32BitHex(0))
 	}
+	row.Call("appendChild", opcodeColumn)
 
 	return row
 }

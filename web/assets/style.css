@@ -157,11 +157,18 @@ button:active {
   text-align: center;
 }
 
-#debugger-registers {
+#debugger-registers, #debugger-code-view {
   display: inline-table;
+  font-family: monospace, sans-serif;
+  background-color: #f0f0f0;
+  margin: 10px;
 }
 
 .register-value:hover {
   background-color: #d5d5d5;
   cursor: pointer;
+}
+
+.debugger-code-view-current {
+  font-weight: bold;
 }
