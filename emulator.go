@@ -27,6 +27,17 @@ type Emulator struct {
 	JumpTarget uint32
 }
 
+// Done returns true if the program has begun to execute NOPs past the executable code.
+func (e *Emulator) Done() bool {
+	if e.JumpNext {
+		return false
+	}
+	return e.ProgramCounter >= e.Executable.End()
+}
+
+// Step performs the next instruction on the CPU.
+// If the instruction fails, then this will return an error.
+// In the case of an error, the program counter may still be changed as usual.
 func (e *Emulator) Step() error {
 	inst := e.Executable.Get(e.ProgramCounter)
 	if e.JumpNext {
@@ -44,6 +55,7 @@ func (e *Emulator) Step() error {
 	}
 
 	switch inst.Name {
+	case "NOP":
 	case "BEQ", "BGEZ", "BGTZ", "BLEZ", "BLTZ", "BNE":
 		return e.executeBranch(inst)
 	case "J", "JR", "JAL", "JALR":
@@ -228,7 +240,6 @@ func (e *Emulator) executeImmediateArithmetic(inst *Instruction) {
 		result = val1 & val2
 	case "ORI":
 		result = val1 | val2
-		fallthrough
 	case "XORI":
 		result = val1 ^ val2
 	}
@@ -298,7 +309,7 @@ func (e *Emulator) executeRegisterShift(inst *Instruction) {
 		return
 	}
 
-	shiftAmount := e.RegisterFile[inst.Registers[2]]
+	shiftAmount := e.RegisterFile[inst.Registers[2]] & 0x1f
 	val := e.RegisterFile[inst.Registers[1]]
 
 	var res uint32
