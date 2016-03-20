@@ -183,6 +183,39 @@ func TestEmulatorBranches(t *testing.T) {
 	}
 }
 
+func TestEmulatorErrors(t *testing.T) {
+	// TODO: add programs for misaligned memory.
+	programs := []string{
+		"ORI $r1, $r0, 3\nJR $r1",
+		"J SYM\nJ SYM1\nNOP\nSYM:\nSYM1:",
+	}
+ProgramLoop:
+	for i, code := range programs {
+		lines, err := TokenizeSource(code)
+		if err != nil {
+			t.Error(i, "-", err)
+			continue
+		}
+		program, err := ParseExecutable(lines)
+		if err != nil {
+			t.Error(i, "-", err)
+			continue
+		}
+		memory := NewLazyMemory()
+		emulator := &Emulator{
+			Memory:            memory,
+			Executable:        program,
+			ForceMemAlignment: true,
+		}
+		for !emulator.Done() {
+			if err := emulator.Step(); err != nil {
+				continue ProgramLoop
+			}
+		}
+		t.Error("program", i, "did not fail")
+	}
+}
+
 func runTestProgram(code string) (*Emulator, error) {
 	lines, err := TokenizeSource(code)
 	if err != nil {
