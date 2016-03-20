@@ -280,3 +280,9 @@ func TestParseArgToken(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkParseArgTokenReg(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseArgToken("$r15")
+	}
+}
