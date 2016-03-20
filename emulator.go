@@ -7,6 +7,23 @@ import (
 
 type RegisterFile [32]uint32
 
+func (r RegisterFile) String() string {
+	res := ""
+	for i := 0; i < 16; i++ {
+		label1 := "r" + strconv.Itoa(i)
+		if len(label1) == 2 {
+			label1 += " "
+		}
+		label2 := "r" + strconv.Itoa(i+16)
+		if i != 0 {
+			res += "\n"
+		}
+		res += label1 + " = " + eightDigitHex(r[i]) + "  " + label2 + " = " +
+			eightDigitHex(r[i+16])
+	}
+	return res
+}
+
 type Emulator struct {
 	RegisterFile   RegisterFile
 	Memory         Memory
@@ -350,4 +367,12 @@ func (e *Emulator) instructionError(msg string) error {
 	pc := e.ProgramCounter - 4
 	pcStr := "0x" + strconv.FormatUint(uint64(pc), 16)
 	return errors.New("error at " + pcStr + ": " + msg)
+}
+
+func eightDigitHex(n uint32) string {
+	s := strconv.FormatUint(uint64(n), 16)
+	for len(s) < 8 {
+		s = "0" + s
+	}
+	return "0x" + s
 }
