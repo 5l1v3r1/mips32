@@ -109,6 +109,80 @@ func TestEmulatorJumps(t *testing.T) {
 	}
 }
 
+func TestEmulatorBranches(t *testing.T) {
+	code := `
+		ORI $3, $0, 0x8c46
+		ORI $4, $0, 0x8c10
+		BEQLOOP:
+		ADDIU $4, $4, 1
+		ADDIU $5, $5, 1
+		BEQ $3, $4, BEQLOOPEND
+		NOP
+		J BEQLOOP
+		BEQLOOPEND:
+
+		# $r3 = $r4 = 0x8c46
+		# $r5 = 0x36
+
+		ORI $6, $0, 0x8c47
+		ORI $7, $0, 0x8c10
+		BNELOOP:
+		ADDIU $6, $6, -1
+		BNE $6, $7, -8
+		ADDIU $8, $8, 1
+
+		# $r6 = $r7 = 0x8c10
+		# $r8 = 0x37
+
+		ORI $9, $0, 10
+		BGEZLOOP:
+		ADDIU $9, $9, -1
+		BGEZ $9, BGEZLOOP
+		ADDIU $10, $10, 1
+
+		# $r9 = -1
+		# $r10 = 11
+
+		ORI $11, $0, 10
+		BGTZLOOP:
+		ADDIU $11, $11, -1
+		BGTZ $11, BGTZLOOP
+		ADDIU $12, $12, 1
+
+		# $r11 = 0
+		# $r12 = 10
+
+		ADDIU $13, $13, -10
+		BLEZLOOP:
+		ADDIU $13, $13, 1
+		BLEZ $13, -8
+		ADDIU $14, $14, 1
+
+		# $r13 = 1
+		# $r14 = 10
+
+		ADDIU $15, $0, -10
+		BLTZLOOP:
+		ADDIU $15, $15, 1
+		BLTZ $15, BLTZLOOP
+		ADDIU $16, $16, 1
+
+		# $r15 = 0
+		# $r16 = 9
+	`
+	emulator, err := runTestProgram(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regFile := RegisterFile{3: 0x8c46, 4: 0x8c46, 5: 0x36, 6: 0x8c10, 7: 0x8c10, 8: 0x37,
+		9: 0xffffffff, 10: 11, 11: 0, 12: 10, 13: 1, 14: 11, 15: 0, 16: 10}
+	for i := 0; i < 32; i++ {
+		if regFile[i] != emulator.RegisterFile[i] {
+			t.Error("bad register", i, "-", emulator.RegisterFile[i])
+		}
+	}
+}
+
 func runTestProgram(code string) (*Emulator, error) {
 	lines, err := TokenizeSource(code)
 	if err != nil {
