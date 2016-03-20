@@ -55,16 +55,90 @@ func (t *TokenizedLine) Equal(t1 *TokenizedLine) bool {
 	return true
 }
 
+// String returns a human-readable version of this line.
+func (l *TokenizedLine) String() string {
+	commentStr := ""
+	if l.Comment != nil {
+		commentStr = " #" + *l.Comment
+	}
+	if l.Directive != nil {
+		return l.Directive.String() + commentStr
+	} else if l.Instruction != nil {
+		return l.Instruction.String() + commentStr
+	} else if l.SymbolMarker != nil {
+		return *l.SymbolMarker + ":" + commentStr
+	}
+	if len(commentStr) > 0 {
+		return commentStr[1:]
+	} else {
+		return ""
+	}
+}
+
 // A TokenizedDirective represents a directive like ".text 0x5000" or ".data 0x0".
 type TokenizedDirective struct {
 	Name     string
 	Constant uint32
 }
 
+func (t *TokenizedDirective) String() string {
+	return "." + t.Name + " " + unsignedConst32ToString(t.Constant)
+}
+
 // A TokenizedInstruction represents an instruction call.
 type TokenizedInstruction struct {
 	Name      string
 	Arguments []*ArgToken
+}
+
+func (t *TokenizedInstruction) String() string {
+	for _, template := range Templates {
+		if !template.Match(t) {
+			continue
+		}
+		argStrings := make([]string, len(template.Arguments))
+		for i, arg := range template.Arguments {
+			tokArg := t.Arguments[i]
+			switch arg {
+			case Register:
+				reg, _ := tokArg.Register()
+				argStrings[i] = registerToString(reg)
+			case SignedConstant16:
+				c, _ := tokArg.SignedConstant16()
+				argStrings[i] = signedConst16ToString(c)
+			case UnsignedConstant16:
+				c, _ := tokArg.UnsignedConstant16()
+				argStrings[i] = unsignedConst16ToString(c)
+			case Constant5:
+				c, _ := tokArg.Constant5()
+				argStrings[i] = strconv.Itoa(int(c))
+			case AbsoluteCodePointer:
+				ptr, _ := tokArg.AbsoluteCodePointer()
+				if ptr.IsSymbol {
+					argStrings[i] = ptr.Symbol
+				} else {
+					argStrings[i] = unsignedConst32ToString(ptr.Constant)
+				}
+			case RelativeCodePointer:
+				ptr, _ := tokArg.RelativeCodePointer()
+				if ptr.IsSymbol {
+					argStrings[i] = ptr.Symbol
+				} else {
+					argStrings[i] = signedConst32ToString(int32(ptr.Constant))
+				}
+			case MemoryAddress:
+				ref, _ := tokArg.MemoryReference()
+				argStrings[i] = signedConst16ToString(ref.Offset) + "(" +
+					registerToString(ref.Register) + ")"
+			}
+		}
+		if len(argStrings) > 0 {
+			return t.Name + " " + strings.Join(argStrings, " ")
+		} else {
+			return t.Name
+		}
+	}
+	return t.Name + " # UNRECOGNIZED INSTRUCTION."
 }
 
 // Equal returns whether or not two TokenizedInstructions are syntactically equivalent.
@@ -170,4 +244,24 @@ func tokenizeLine(lineText string) (line TokenizedLine, err error) {
 	}
 
 	return
+}
+
+func unsignedConst32ToString(constant uint32) string {
+	return strconv.FormatUint(uint64(constant), 10)
+}
+
+func signedConst32ToString(constant int32) string {
+	return strconv.FormatInt(int64(constant), 10)
+}
+
+func registerToString(regNum int) string {
+	return "$" + strconv.Itoa(regNum)
+}
+
+func signedConst16ToString(constant int16) string {
+	return strconv.FormatInt(int64(constant), 10)
+}
+
+func unsignedConst16ToString(constant uint16) string {
+	return strconv.FormatUint(uint64(constant), 10)
 }
