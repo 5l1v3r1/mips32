@@ -307,11 +307,11 @@ func instructionBranchOffset(inst *Instruction, instAddr uint32,
 		if addr, ok := symbols[inst.CodePointer.Symbol]; !ok {
 			return 0, unknownSymbolError(inst.CodePointer.Symbol)
 		} else {
-			diff := (int32(addr) - int32(instAddr+4)) / 4
+			diff := (int32(addr) - int32(instAddr+4)) >> 2
 			if diff >= 0x8000 || diff < -0x8000 {
 				return 0, errors.New("branch offset out of bounds")
 			}
-			return uint32(uint16(diff)), nil
+			return uint32(uint16(diff)) << 2, nil
 		}
 	} else {
 		if inst.CodePointer.Constant&3 != 0 {

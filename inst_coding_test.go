@@ -94,16 +94,28 @@ func TestInstCodingProgram(t *testing.T) {
 
 func TestInstCodingControl(t *testing.T) {
 	controls := map[string]bool{
-		"BEQ $r15, $r17, SYM1": true,
-		"BEQ $r15, $r17, SYM2": true,
-		"J SYM3":               true,
-		"J 0x10000004":         true,
-		"BEQ $r15, $r17, SYM4": false,
-		"BEQ $r13, $r31, SYM5": false,
-		"J SYM1":               false,
-		"BLEZ $15, 7":          false,
-		"J 0x10000007":         false,
+		"BEQ $r15, $r17, SYM1":     true,
+		"BEQ $r15, $r17, SYM2":     true,
+		"BEQ $r15, $r17, -0x20000": true,
+		"BEQ $r15, $r17, 0x1fffc":  true,
+		"J SYM3":                   true,
+		"J 0x10000004":             true,
+		"BEQ $r15, $r17, SYM4":     false,
+		"BEQ $r13, $r31, SYM5":     false,
+		"J SYM1":                   false,
+		"BLEZ $15, 7":              false,
+		"J 0x10000007":             false,
 	}
+
+	encoded := map[string]uint32{
+		"BEQ $r15, $r17, SYM1":     0x11f18000,
+		"BEQ $r15, $r17, SYM2":     0x11f17fff,
+		"BEQ $r15, $r17, -0x20000": 0x11f18000,
+		"BEQ $r15, $r17, 0x1fffc":  0x11f17fff,
+		"J SYM3":                   0x08014000,
+		"J 0x10000004":             0x08000001,
+	}
+
 	symbols := map[string]uint32{"SYM1": 0xffe0004, "SYM2": 0x10020000, "SYM3": 0x10050000,
 		"SYM4": 0xffe0000, "SYM5": 0x10020004}
 	for ctrl, success := range controls {
@@ -121,8 +133,10 @@ func TestInstCodingControl(t *testing.T) {
 			t.Error("failed to parse tokenized instruction for", ctrl)
 			continue
 		}
-		if _, err := inst.Encode(0x10000000, symbols); (err == nil) != success {
+		if code, err := inst.Encode(0x10000000, symbols); (err == nil) != success {
 			t.Error("control", ctrl, "-", err)
+		} else if success && encoded[ctrl] != code {
+			t.Error("bad code for", ctrl, "-", code)
 		}
 	}
 }
