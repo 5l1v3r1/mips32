@@ -17,7 +17,7 @@ type Disassembler struct {
 
 func NewDisassembler() *Disassembler {
 	res := &Disassembler{
-		textarea:  js.Global.Get("disassembler-code"),
+		textarea:  js.Global.Get("disassembler-data"),
 		errorView: js.Global.Get("disassembler-error"),
 	}
 	js.Global.Get("disassembler-button").Call("addEventListener", "click", res.disassemble)
