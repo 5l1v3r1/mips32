@@ -29,7 +29,7 @@ body.showing-debugger > #debugger {
   display: block;
 }
 
-body.showing-debugger > #debugger-link {
+body.showing-debugger #debugger-link {
   font-weight: bold;
 }
 
