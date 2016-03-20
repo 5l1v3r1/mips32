@@ -156,3 +156,12 @@ button:active {
   font-size: 16px;
   text-align: center;
 }
+
+#debugger-registers {
+  display: inline-table;
+}
+
+.register-value:hover {
+  background-color: #d5d5d5;
+  cursor: pointer;
+}
