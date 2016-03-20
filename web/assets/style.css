@@ -1,0 +1,66 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.content-pane {
+  display: none;
+}
+
+body.showing-assembler > #assembler {
+  display: block;
+}
+
+body.showing-assembler #assembler-link {
+  font-weight: bold;
+}
+
+body.showing-disassembler > #disassembler {
+  display: block;
+}
+
+body.showing-disassembler #disassembler-link {
+  font-weight: bold;
+}
+
+body.showing-debugger > #debugger {
+  display: block;
+}
+
+body.showing-debugger > #debugger-link {
+  font-weight: bold;
+}
+
+nav {
+  overflow: hidden;
+  display: inline-block;
+  margin: 10px 0;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid black;
+  background-color: #f0f0f0;
+}
+
+nav::after {
+  display: block;
+  content: '';
+  clear: both;
+}
+
+.nav-link {
+  float: left;
+  padding: 10px;
+  border-left: 1px solid black;
+  text-decoration: none;
+  color: black;
+}
+
+.nav-link:hover {
+  background-color: #d5d5d5;
+}
+
+.nav-link-first {
+  border-left: none;
+}
