@@ -15,13 +15,16 @@
     </nav>
     <div id="assembler" class="content-pane">
       <textarea id="assembler-code"></textarea>
+      <br>
       <button id="assembler-button">Assemble</button>
+      <br>
       <label id="assembler-error"></label>
     </div>
     <div id="debugger" class="content-pane">
       <div id="debugger-controls">
         <button id="debugger-step">Step</button>
         <button id="debugger-play">Play</button>
+        <button id="debugger-reset">Reset</button>
         <select id="debugger-rate">
           <option value="1">1Hz</option>
           <option value="2">2Hz</option>
@@ -36,12 +39,16 @@
         </select>
       </div>
       <table id="debugger-code-view"></table>
+      <br>
       <table id="debugger-registers"></table>
+      <br>
       <table id="debugger-memory"></table>
     </div>
     <div id="disassembler" class="content-pane">
       <textarea id="disassembler-data"></textarea>
+      <br>
       <button id="disassembler-button">Disassemble</button>
+      <br>
       <label id="disassembler-error"></label>
     </div>
   </body>
