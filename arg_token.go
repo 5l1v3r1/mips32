@@ -104,6 +104,9 @@ func (t *ArgToken) Constant5() (constant uint8, ok bool) {
 
 // RelativeCodePointer returns the relative code pointer represented by this token.
 // If this token cannot be treated as a relative code pointer, ok will be false.
+//
+// If the code pointer is a constant, the constant value will represent an 18-bit signed address
+// which is signed extended to 32 bits.
 func (t *ArgToken) RelativeCodePointer() (ptr CodePointer, ok bool) {
 	if t.isConstant {
 		constant := int16(t.constant >> 2)
@@ -120,6 +123,9 @@ func (t *ArgToken) RelativeCodePointer() (ptr CodePointer, ok bool) {
 
 // AbsoluteCodePointer returns the absolute code pointer represented by this token.
 // If this token cannot be treated as an absolute code pointer, ok will be false.
+//
+// If the code pointer is a constant, it will be an absolute jump destination.
+// The destination address should include the high bits of the intended PC+4 value.
 func (t *ArgToken) AbsoluteCodePointer() (ptr CodePointer, ok bool) {
 	if t.isConstant {
 		return CodePointer{Absolute: true, Constant: uint32(t.constant)}, true
