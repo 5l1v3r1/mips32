@@ -70,6 +70,7 @@ func (d *Debugger) Show() {
 
 func (d *Debugger) debugLoop() {
 	for command := range d.controlChan {
+		println("command is", command)
 		if command == stepDebugger {
 			d.stepDebugger()
 		} else if command == startDebugger {

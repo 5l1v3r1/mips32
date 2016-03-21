@@ -17,7 +17,10 @@ func NewAssembler() *Assembler {
 		textarea:  js.Global.Get("assembler-code"),
 		errorView: js.Global.Get("assembler-error"),
 	}
-	js.Global.Get("assembler-button").Call("addEventListener", "click", res.assemble)
+	js.Global.Get("assembler-button").Call("addEventListener", "click", func() {
+		res.Assemble()
+		GlobalDebugger.Show()
+	})
 	return res
 }
 
@@ -30,7 +33,7 @@ func (a *Assembler) Show() {
 	js.Global.Get("location").Set("hash", "#assembler")
 }
 
-func (a *Assembler) assemble() {
+func (a *Assembler) Assemble() {
 	text := a.textarea.Get("value").String()
 
 	lines, err := mips32.TokenizeSource(text)
@@ -45,7 +48,6 @@ func (a *Assembler) assemble() {
 	}
 	a.hideError()
 	GlobalDebugger.SetExecutable(exc)
-	GlobalDebugger.Show()
 
 	if exc.End() < maxAssembleSize {
 		data := make([]uint32, exc.End()/4)
