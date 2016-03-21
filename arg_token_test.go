@@ -331,3 +331,9 @@ func BenchmarkParseArgTokenReg(b *testing.B) {
 		ParseArgToken("$r15")
 	}
 }
+
+func BenchmarkParseArgTokenMem(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseArgToken("0x15($r15)")
+	}
+}

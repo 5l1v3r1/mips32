@@ -8,18 +8,14 @@ import (
 )
 
 var (
-	registerNamePattern = "\\$(t[0-9]|s[0-8]|a[0-3]|v[01]|k[01]|sp|fp|gp|ra|zero|at|" +
-		"r?([0-9]|[0-2][0-9]|3[01]))"
 	constantNumberPattern = "(-?[0-9]*|-?0x[0-9a-fA-F]*)"
 	symbolNamePattern     = "([a-zA-Z0-9_]*)"
 )
 
 var (
-	registerRegexp = regexp.MustCompile("^" + registerNamePattern + "$")
-	constantRegexp = regexp.MustCompile("^" + constantNumberPattern + "$")
-	symbolRegexp   = regexp.MustCompile("^" + symbolNamePattern + "$")
-	memoryRegexp   = regexp.MustCompile("^(" + constantNumberPattern + "|)\\(" +
-		registerNamePattern + "\\)$")
+	constantRegexp        = regexp.MustCompile("^" + constantNumberPattern + "$")
+	symbolRegexp          = regexp.MustCompile("^" + symbolNamePattern + "$")
+	memoryRegexp          = regexp.MustCompile("^(" + constantNumberPattern + "|)\\(.+\\)$")
 	memorySubfieldsRegexp = regexp.MustCompile("^(.*)\\((.*)\\)$")
 )
 
@@ -79,8 +75,8 @@ type ArgToken struct {
 // ParseArgToken parses a human-readable token string.
 // The string must not have any leading or trailing whitespace.
 func ParseArgToken(tokenStr string) (token *ArgToken, err error) {
-	if registerRegexp.MatchString(tokenStr) {
-		return parseRegisterArgToken(tokenStr)
+	if regToken, err := parseRegisterArgToken(tokenStr); err == nil {
+		return regToken, nil
 	} else if constantRegexp.MatchString(tokenStr) {
 		return parseConstantArgToken(tokenStr)
 	} else if symbolRegexp.MatchString(tokenStr) {
