@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	registerNamePattern = "\\$(t[0-9]|s[0-7]|a[0-3]|v[01]|sp|fp|gp|ra|zero|" +
+	registerNamePattern = "\\$(t[0-9]|s[0-8]|a[0-3]|v[01]|k[01]|sp|fp|gp|ra|zero|at|" +
 		"r?([0-9]|[0-2][0-9]|3[01]))"
 	constantNumberPattern = "(-?[0-9]*|-?0x[0-9a-fA-F]*)"
 	symbolNamePattern     = "([a-zA-Z0-9_]*)"
@@ -22,6 +22,21 @@ var (
 		registerNamePattern + "\\)$")
 	memorySubfieldsRegexp = regexp.MustCompile("^(.*)\\((.*)\\)$")
 )
+
+var registerNames = map[string]int{
+	"0": 0, "zero": 0, "1": 1, "at": 1, "2": 2, "v0": 2, "3": 3, "v1": 3, "4": 4, "a0": 4, "5": 5,
+	"a1": 5, "6": 6, "a2": 6, "7": 7, "a3": 7, "8": 8, "t0": 8, "9": 9, "t1": 9, "10": 10, "t2": 10,
+	"11": 11, "t3": 11, "12": 12, "t4": 12, "13": 13, "t5": 13, "14": 14, "t6": 14, "15": 15,
+	"t7": 15, "16": 16, "s0": 16, "17": 17, "s1": 17, "18": 18, "s2": 18, "19": 19, "s3": 19,
+	"20": 20, "s4": 20, "21": 21, "s5": 21, "22": 22, "s6": 22, "23": 23, "s7": 23, "24": 24,
+	"t8": 24, "25": 25, "t9": 25, "26": 26, "k0": 26, "27": 27, "k1": 27, "28": 28, "gp": 28,
+	"29": 29, "sp": 29, "30": 30, "s8": 30, "fp": 30, "31": 31, "ra": 31,
+
+	"r0": 0, "r1": 1, "r2": 2, "r3": 3, "r4": 4, "r5": 5, "r6": 6, "r7": 7, "r8": 8, "r9": 9,
+	"r10": 10, "r11": 11, "r12": 12, "r13": 13, "r14": 14, "r15": 15, "r16": 16, "r17": 17,
+	"r18": 18, "r19": 19, "r20": 20, "r21": 21, "r22": 22, "r23": 23, "r24": 24, "r25": 25,
+	"r26": 26, "r27": 27, "r28": 28, "r29": 29, "r30": 30, "r31": 31,
+}
 
 // A CodePointer contains some kind of information indicating where a piece of code is.
 type CodePointer struct {
@@ -193,32 +208,11 @@ func parseRegister(tokenStr string) (regIndex int, err error) {
 		return 0, errors.New("missing $ in register name: " + tokenStr)
 	}
 	rawName := tokenStr[1:]
-	specialCases := map[string]int{"zero": 0, "sp": 29, "fp": 30, "gp": 28, "ra": 31}
-	if num, ok := specialCases[rawName]; ok {
-		return num, nil
+	if regNum, ok := registerNames[rawName]; ok {
+		return regNum, nil
+	} else {
+		return 0, errors.New("invalid register name: " + tokenStr)
 	}
-
-	prefixes := map[string]int{"t([0-7])": 8, "t([89])": 24 - 8, "s([0-7])": 16, "a([0-3])": 4,
-		"v([01])": 2, "r([12][0-9]|3[01]|[0-9])": 0}
-	for prefix, start := range prefixes {
-		r := regexp.MustCompile("^" + prefix + "$")
-		m := r.FindStringSubmatch(rawName)
-		if m != nil {
-			idx, err := strconv.Atoi(m[1])
-			if err != nil {
-				panic("failed to parse integer component of register name")
-			}
-			return idx + start, nil
-		}
-	}
-
-	rawNum, err := strconv.Atoi(rawName)
-	if err != nil {
-		return 0, err
-	} else if rawNum < 0 || rawNum >= 0x20 {
-		return 0, errors.New("invalid register index: " + rawName)
-	}
-	return rawNum, nil
 }
 
 func parseConstant(tokenStr string) (constant uint32, err error) {

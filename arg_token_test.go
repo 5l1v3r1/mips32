@@ -1,6 +1,9 @@
 package mips32
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 func TestParseArgToken(t *testing.T) {
 	token, err := ParseArgToken("5")
@@ -277,6 +280,48 @@ func TestParseArgToken(t *testing.T) {
 	for _, tok := range badTokens {
 		if _, err := ParseArgToken(tok); err == nil {
 			t.Error("parsed invalid token:", tok)
+		}
+	}
+}
+
+func TestRegisterNameParsing(t *testing.T) {
+	mapping := map[string]int{
+		"$zero": 0,
+		"$at":   1,
+		"$gp":   28,
+		"$sp":   29,
+		"$fp":   30,
+		"$ra":   31,
+		"$v0":   2,
+		"$v1":   3,
+		"$t8":   24,
+		"$t9":   25,
+		"$s8":   30,
+		"$k0":   26,
+		"$k1":   27,
+	}
+	for i := 0; i < 32; i++ {
+		iName := strconv.Itoa(i)
+		mapping["$"+iName] = i
+		mapping["$r"+iName] = i
+	}
+	for i := 0; i <= 7; i++ {
+		name := "$t" + strconv.Itoa(i)
+		mapping[name] = i + 8
+	}
+	for i := 0; i <= 7; i++ {
+		name := "$s" + strconv.Itoa(i)
+		mapping[name] = i + 16
+	}
+	for i := 0; i <= 3; i++ {
+		name := "$a" + strconv.Itoa(i)
+		mapping[name] = i + 4
+	}
+	for name, expected := range mapping {
+		if tok, err := ParseArgToken(name); err != nil {
+			t.Error(name, err)
+		} else if idx, ok := tok.Register(); !ok || idx != expected {
+			t.Error(name, idx, ok)
 		}
 	}
 }
