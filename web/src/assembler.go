@@ -18,8 +18,9 @@ func NewAssembler() *Assembler {
 		errorView: js.Global.Get("assembler-error"),
 	}
 	js.Global.Get("assembler-button").Call("addEventListener", "click", func() {
-		res.Assemble()
-		GlobalDebugger.Show()
+		if res.Assemble() {
+			GlobalDebugger.Show()
+		}
 	})
 	return res
 }
@@ -33,18 +34,18 @@ func (a *Assembler) Show() {
 	js.Global.Get("location").Set("hash", "#assembler")
 }
 
-func (a *Assembler) Assemble() {
+func (a *Assembler) Assemble() bool {
 	text := a.textarea.Get("value").String()
 
 	lines, err := mips32.TokenizeSource(text)
 	if err != nil {
 		a.showError(err)
-		return
+		return false
 	}
 	exc, err := mips32.ParseExecutable(lines)
 	if err != nil {
 		a.showError(err)
-		return
+		return false
 	}
 	a.hideError()
 	GlobalDebugger.SetExecutable(exc)
@@ -60,6 +61,7 @@ func (a *Assembler) Assemble() {
 		}
 		GlobalDisassembler.SetData(data)
 	}
+	return true
 }
 
 func (a *Assembler) hideError() {
