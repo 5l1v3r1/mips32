@@ -106,6 +106,26 @@ func TestTokenizeSource(t *testing.T) {
 	}
 }
 
+func BenchmarkTokenizeSource(b *testing.B) {
+	code := `
+		.text 0x50000 # this says where our program's data is located.
+		FOOBAR:
+		LUI $r5, 0xDEAD
+		ORI $r5, $r5, 0xBEEF # 0xDEADBEEF is a cool hex string.
+
+		SW $r5, 0x1337($t0)
+
+		# the next line is a NOP
+		.word 0x00000000
+
+		J FOOBAR
+		NOP
+	`
+	for i := 0; i < b.N; i++ {
+		TokenizeSource(code)
+	}
+}
+
 func createStringPtr(s string) *string {
 	return &s
 }
