@@ -177,3 +177,26 @@ button:focus {
 .debugger-code-view-current {
   font-weight: bold;
 }
+
+#debugger-memory {
+  display: inline-block;
+}
+
+#debugger-memory-contents {
+  margin: 5px;
+  background-color: #f0f0f0;
+}
+
+#debugger-memory-base {
+  background-color: #f0f0f0;
+}
+
+#debugger-memory-base:hover {
+  background-color: #d5d5d5;
+  cursor: pointer;
+}
+
+.debugger-memory-value:hover {
+  background-color: #d5d5d5;
+  cursor: pointer;
+}

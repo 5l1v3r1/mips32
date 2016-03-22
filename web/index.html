@@ -46,7 +46,11 @@
       <br>
       <table id="debugger-registers"></table>
       <br>
-      <table id="debugger-memory"></table>
+      <div id="debugger-memory">
+        Memory at <label id="debugger-memory-base">0x00000000</label>
+        <br>
+        <table id="debugger-memory-contents"></table>
+      </div>
     </div>
     <div id="disassembler" class="content-pane">
       <textarea id="disassembler-data"></textarea>

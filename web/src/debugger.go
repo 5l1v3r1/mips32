@@ -16,9 +16,10 @@ type Debugger struct {
 	controlChan chan debuggerCommand
 	emulator    *mips32.Emulator
 
-	registers *Registers
-	codeView  *CodeView
-	errorView *js.Object
+	registers  *Registers
+	codeView   *CodeView
+	memoryView *MemoryView
+	errorView  *js.Object
 }
 
 func NewDebugger() *Debugger {
@@ -33,9 +34,10 @@ func NewDebugger() *Debugger {
 			},
 			LittleEndian: true,
 		},
-		registers: NewRegisters(),
-		codeView:  NewCodeView(),
-		errorView: js.Global.Get("debugger-error"),
+		registers:  NewRegisters(),
+		codeView:   NewCodeView(),
+		memoryView: NewMemoryView(),
+		errorView:  js.Global.Get("debugger-error"),
 	}
 
 	go res.debugLoop()
@@ -66,6 +68,20 @@ func (d *Debugger) SetExecutable(e *mips32.Executable) {
 
 func (d *Debugger) Show() {
 	js.Global.Get("location").Set("hash", "#debugger")
+}
+
+// Get returns the byte at a given memory address in the debugger's RAM.
+func (d *Debugger) Get(ptr uint32) byte {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	return d.emulator.Memory.Get(ptr)
+}
+
+// Set changes the byte at a given memory address in the debugger's RAM.
+func (d *Debugger) Set(ptr uint32, b byte) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.emulator.Memory.Set(ptr, b)
 }
 
 func (d *Debugger) debugLoop() {
@@ -145,6 +161,8 @@ func (d *Debugger) hideError() {
 }
 
 func (d *Debugger) updateUI() {
+	d.memoryView.Update(d)
+
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -181,34 +199,40 @@ func (d *Debugger) registerUIEvents() {
 
 	playButton := js.Global.Get("debugger-play")
 	playButton.Call("addEventListener", "click", func() {
-		if playButton.Get("textContent").String() == "Stop" {
-			d.controlChan <- stopDebugger
-		} else {
-			d.controlChan <- startDebugger
-		}
+		go func() {
+			if playButton.Get("textContent").String() == "Stop" {
+				d.controlChan <- stopDebugger
+			} else {
+				d.controlChan <- startDebugger
+			}
+		}()
 	})
 
 	ratePicker := js.Global.Get("debugger-rate")
 	ratePicker.Call("addEventListener", "change", func() {
-		rate := ratePicker.Get("value").String()
-		num, _ := strconv.Atoi(rate)
-		d.lock.Lock()
-		d.frequency = num
-		d.lock.Unlock()
-		d.controlChan <- updateDebuggerFreq
+		go func() {
+			rate := ratePicker.Get("value").String()
+			num, _ := strconv.Atoi(rate)
+			d.lock.Lock()
+			d.frequency = num
+			d.lock.Unlock()
+			d.controlChan <- updateDebuggerFreq
+		}()
 	})
 
 	js.Global.Get("debugger-reset").Call("addEventListener", "click", func() {
-		d.hideError()
-		d.controlChan <- stopDebugger
-		d.lock.Lock()
-		d.emulator = &mips32.Emulator{
-			Memory:       mips32.NewLazyMemory(),
-			Executable:   d.emulator.Executable,
-			LittleEndian: true,
-		}
-		d.lock.Unlock()
-		d.updateUI()
+		go func() {
+			d.hideError()
+			d.controlChan <- stopDebugger
+			d.lock.Lock()
+			d.emulator = &mips32.Emulator{
+				Memory:       mips32.NewLazyMemory(),
+				Executable:   d.emulator.Executable,
+				LittleEndian: true,
+			}
+			d.lock.Unlock()
+			d.updateUI()
+		}()
 	})
 }
 

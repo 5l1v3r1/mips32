@@ -15,10 +15,10 @@ ORI $r1, $r1, 0xBEEF`
 
 func main() {
 	js.Global.Get("window").Call("addEventListener", "load", func() {
-		GlobalDebugger = NewDebugger()
-		GlobalAssembler = NewAssembler()
-		GlobalDisassembler = NewDisassembler()
 		go func() {
+			GlobalDebugger = NewDebugger()
+			GlobalAssembler = NewAssembler()
+			GlobalDisassembler = NewDisassembler()
 			GlobalAssembler.SetCode(defaultProgram)
 			GlobalAssembler.Assemble()
 		}()
