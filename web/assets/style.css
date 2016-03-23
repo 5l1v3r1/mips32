@@ -200,3 +200,7 @@ button:focus {
   background-color: #d5d5d5;
   cursor: pointer;
 }
+
+#debugger-step-count {
+  display: block;
+}

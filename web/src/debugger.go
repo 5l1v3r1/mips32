@@ -15,11 +15,13 @@ type Debugger struct {
 	frequency   int
 	controlChan chan debuggerCommand
 	emulator    *mips32.Emulator
+	stepCount   int
 
-	registers  *Registers
-	codeView   *CodeView
-	memoryView *MemoryView
-	errorView  *js.Object
+	registers      *Registers
+	codeView       *CodeView
+	memoryView     *MemoryView
+	errorView      *js.Object
+	stepCountLabel *js.Object
 }
 
 func NewDebugger() *Debugger {
@@ -34,10 +36,11 @@ func NewDebugger() *Debugger {
 			},
 			LittleEndian: true,
 		},
-		registers:  NewRegisters(),
-		codeView:   NewCodeView(),
-		memoryView: NewMemoryView(),
-		errorView:  js.Global.Get("debugger-error"),
+		registers:      NewRegisters(),
+		codeView:       NewCodeView(),
+		memoryView:     NewMemoryView(),
+		errorView:      js.Global.Get("debugger-error"),
+		stepCountLabel: js.Global.Get("debugger-step-count"),
 	}
 
 	go res.debugLoop()
@@ -54,14 +57,22 @@ func NewDebugger() *Debugger {
 	return res
 }
 
+// SetExecutable loads a new executable in the debugger.
+// It deletes all saved state (i.e. registers and memory).
+// If the given executable is nil, the current executable will be reloaded.
 func (d *Debugger) SetExecutable(e *mips32.Executable) {
+	d.hideError()
 	d.controlChan <- stopDebugger
 	d.lock.Lock()
+	if e == nil {
+		e = d.emulator.Executable
+	}
 	d.emulator = &mips32.Emulator{
 		Memory:       mips32.NewLazyMemory(),
 		Executable:   e,
 		LittleEndian: true,
 	}
+	d.stepCount = 0
 	d.lock.Unlock()
 	d.updateUI()
 }
@@ -118,6 +129,7 @@ func (d *Debugger) runDebugger() {
 		d.lock.Lock()
 		for i := 0; i < cyclesPerFrame; i++ {
 			err := d.emulator.Step()
+			d.stepCount++
 			if err != nil {
 				d.lock.Unlock()
 				d.handleError(err)
@@ -137,6 +149,7 @@ func (d *Debugger) runDebugger() {
 func (d *Debugger) stepDebugger() {
 	d.lock.Lock()
 	err := d.emulator.Step()
+	d.stepCount++
 	d.lock.Unlock()
 	if err != nil {
 		d.handleError(err)
@@ -168,6 +181,7 @@ func (d *Debugger) updateUI() {
 
 	d.registers.Update(d.emulator.RegisterFile)
 	d.codeView.Update(d.emulator)
+	d.stepCountLabel.Set("textContent", "Steps: "+strconv.Itoa(d.stepCount))
 }
 
 func (d *Debugger) updateButtonState(running bool) {
@@ -221,18 +235,7 @@ func (d *Debugger) registerUIEvents() {
 	})
 
 	js.Global.Get("debugger-reset").Call("addEventListener", "click", func() {
-		go func() {
-			d.hideError()
-			d.controlChan <- stopDebugger
-			d.lock.Lock()
-			d.emulator = &mips32.Emulator{
-				Memory:       mips32.NewLazyMemory(),
-				Executable:   d.emulator.Executable,
-				LittleEndian: true,
-			}
-			d.lock.Unlock()
-			d.updateUI()
-		}()
+		go d.SetExecutable(nil)
 	})
 }
 
