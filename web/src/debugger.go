@@ -132,6 +132,7 @@ func (d *Debugger) runDebugger() {
 			d.stepCount++
 			if err != nil {
 				d.lock.Unlock()
+				d.updateUI()
 				d.handleError(err)
 				return
 			}
