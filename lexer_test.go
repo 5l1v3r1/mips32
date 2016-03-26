@@ -98,7 +98,8 @@ func TestTokenizeSource(t *testing.T) {
 		}
 	}
 
-	invalidStrs := []string{"LUI $r5 0xDEAD", ".text foo", "Monkey Brains:", "foo $r5", "$r5, $r4"}
+	invalidStrs := []string{"LUI $r5 0xDEAD", ".text foo", "Monkey Brains:", "foo_bar $r5",
+		"$r5, $r4"}
 	for _, str := range invalidStrs {
 		if _, err := TokenizeSource(str); err == nil {
 			t.Error("expected parse to fail:", str)

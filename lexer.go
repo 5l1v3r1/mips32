@@ -11,7 +11,7 @@ var (
 	commentRegexp      = regexp.MustCompile("^(.*?)(#|//|;)(.*)$")
 	directiveRegexp    = regexp.MustCompile("^\\.(text|word)\\s+" + constantNumberPattern + "$")
 	symbolMarkerRegexp = regexp.MustCompile("^" + symbolNamePattern + ":$")
-	instNameRegexp     = regexp.MustCompile("^[A-Z]*$")
+	instNameRegexp     = regexp.MustCompile("^[A-Za-z]*$")
 )
 
 // A TokenizedLine represents one line of an assembly program, translated into syntactic tokens.
@@ -224,7 +224,7 @@ func tokenizeLine(lineText string) (line TokenizedLine, err error) {
 	}
 
 	line.Instruction = &TokenizedInstruction{
-		Name:      fields[0],
+		Name:      strings.ToUpper(fields[0]),
 		Arguments: make([]*ArgToken, len(fields)-1),
 	}
 
