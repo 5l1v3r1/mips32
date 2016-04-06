@@ -173,13 +173,20 @@ func (e *Emulator) executeMemory(inst *Instruction) error {
 
 	switch inst.Name {
 	case "LB":
-		e.RegisterFile[register] = uint32(int8(e.Memory.Get(address)))
+		if register != 0 {
+			e.RegisterFile[register] = uint32(int8(e.Memory.Get(address)))
+		}
 	case "LBU":
-		e.RegisterFile[register] = uint32(e.Memory.Get(address))
+		if register != 0 {
+			e.RegisterFile[register] = uint32(e.Memory.Get(address))
+		}
 	case "LW":
 		if e.ForceMemAlignment && (address&3) != 0 {
 			return e.instructionError("misaligned load word: 0x" +
 				strconv.FormatUint(uint64(address), 16))
+		}
+		if register == 0 {
+			return nil
 		}
 		if e.LittleEndian {
 			e.RegisterFile[register] = (uint32(e.Memory.Get(address+3)) << 24) |

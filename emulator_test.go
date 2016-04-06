@@ -263,7 +263,8 @@ ProgramLoop:
 }
 
 func TestEmulatorWriteZero(t *testing.T) {
-	code := "NOP\nORI $1, $0, 0x10\nJALR $0, $1\nNOP\nNOP"
+	code := "NOP\nORI $1, $0, 0x10\nJALR $0, $1\nNOP\n" +
+		"SW $1, ($0)\nLW $0, ($0)"
 	lines, err := TokenizeSource(code)
 	if err != nil {
 		t.Fatal(err)
@@ -284,7 +285,7 @@ func TestEmulatorWriteZero(t *testing.T) {
 		}
 	}
 	if emulator.RegisterFile[0] != 0 {
-		t.Error("JALR wrote to register 0.")
+		t.Error("wrote to register 0.")
 	}
 }
 
