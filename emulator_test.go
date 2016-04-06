@@ -262,6 +262,32 @@ ProgramLoop:
 	}
 }
 
+func TestEmulatorWriteZero(t *testing.T) {
+	code := "NOP\nORI $1, $0, 0x10\nJALR $0, $1\nNOP\nNOP"
+	lines, err := TokenizeSource(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	program, err := ParseExecutable(lines)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memory := NewLazyMemory()
+	emulator := &Emulator{
+		Memory:            memory,
+		Executable:        program,
+		ForceMemAlignment: true,
+	}
+	for !emulator.Done() {
+		if err := emulator.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if emulator.RegisterFile[0] != 0 {
+		t.Error("JALR wrote to register 0.")
+	}
+}
+
 func runTestProgram(code string) (*Emulator, error) {
 	return runTestProgramEndianness(code, false)
 }

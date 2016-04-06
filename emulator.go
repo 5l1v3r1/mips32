@@ -157,7 +157,9 @@ func (e *Emulator) executeJump(inst *Instruction) error {
 			if len(inst.Registers) == 2 {
 				destReg = inst.Registers[0]
 			}
-			e.RegisterFile[destReg] = e.ProgramCounter + 4
+			if destReg != 0 {
+				e.RegisterFile[destReg] = e.ProgramCounter + 4
+			}
 		}
 	}
 
